@@ -73,6 +73,11 @@ const OPENAI_API_KEY =
     `,
   })) as string)
 
+if (!OPENAI_API_KEY?.startsWith('sk-')) {
+  console.error('A valid API key is required to continue!')
+  process.exit(1)
+}
+
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
 const openai = createOpenAI({
