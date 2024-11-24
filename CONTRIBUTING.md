@@ -2,6 +2,12 @@
 
 This project uses Bun. Make sure you have it installed.
 
+## Install the dependencies
+
+```bash
+$ bun install
+```
+
 ## Building the project
 
 ```bash
