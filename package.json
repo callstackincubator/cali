@@ -32,7 +32,6 @@
     "@react-native-community/cli-types": "^15.1.2",
     "@release-it-plugins/workspaces": "^4.2.0",
     "@release-it/conventional-changelog": "^9.0.3",
-    "@react-native-community/cli-types": "^15.1.2",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
     "bun-types": "^1.1.33",
