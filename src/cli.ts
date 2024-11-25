@@ -46,38 +46,73 @@ console.log(
 
 console.log()
 
-const OPENAI_API_KEY =
-  process.env.OPENAI_API_KEY ||
-  ((await text({
-    message: dedent`
-      Please provide your OpenAI API key. 
-      
-      To skip this message, set ${chalk.bold('OPENAI_API_KEY')} env variable, and run again. 
-      
-      You can do it in three ways:
-      - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
-        ${chalk.gray(`\`\`\`
-          OPENAI_API_KEY=<your-key>
-          \`\`\`
-        `)}
-      - by passing it inline:
-        ${chalk.gray(`\`\`\`
-          OPENAI_API_KEY=<your-key> npx cali
-          \`\`\`
-        `)}
-      - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
-        ${chalk.gray(`\`\`\`
-          export OPENAI_API_KEY=<your-key>
-          \`\`\`
-        `)}
-    `,
-  })) as string)
+const PROVIDER = (await select({
+  message: 'Select your AI provider:',
+  options: [
+    { value: 'openai', label: 'OpenAI' },
+    { value: 'openrouter', label: 'OpenRouter' },
+  ],
+})) as string
 
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
+let apiKey: string
+let model: string
+let client: ReturnType<typeof createOpenAI>
 
-const openai = createOpenAI({
-  apiKey: OPENAI_API_KEY,
-})
+if (PROVIDER === 'openai') {
+  apiKey =
+    process.env.OPENAI_API_KEY ||
+    ((await text({
+      message: dedent`
+        Please provide your OpenAI API key. 
+        
+        To skip this message, set ${chalk.bold('OPENAI_API_KEY')} env variable, and run again. 
+        
+        You can do it in three ways:
+        - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
+          ${chalk.gray(`\`\`\`
+            OPENAI_API_KEY=<your-key>
+            \`\`\`
+          `)}
+        - by passing it inline:
+          ${chalk.gray(`\`\`\`
+            OPENAI_API_KEY=<your-key> npx cali
+            \`\`\`
+          `)}
+        - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
+          ${chalk.gray(`\`\`\`
+            export OPENAI_API_KEY=<your-key>
+            \`\`\`
+          `)}
+      `,
+    })) as string)
+
+  model = process.env.AI_MODEL || 'gpt-4'
+  
+  client = createOpenAI({
+    apiKey,
+  })
+} else {
+  apiKey =
+    process.env.OPENROUTER_API_KEY ||
+    ((await text({
+      message: 'Please provide your OpenRouter API key:',
+    })) as string)
+
+  const modelPath = (await text({
+    message: 'Enter the model path (e.g., anthropic/claude-3-sonnet):',
+  })) as string
+
+  model = modelPath
+  
+  client = createOpenAI({
+    apiKey,
+    baseURL: 'https://openrouter.ai/api/v1',
+    headers: {
+      'HTTP-Referer': 'https://github.com/callstackincubator/cali',
+      'X-Title': 'Cali - React Native AI Agent',
+    },
+  })
+}
 
 const question = (await text({
   message: 'What do you want to do today?',
@@ -108,7 +143,7 @@ while (true) {
   s.start(chalk.gray('Thinking...'))
 
   const response = await generateText({
-    model: openai(AI_MODEL),
+    model: client(model),
     system: reactNativePrompt,
     tools,
     maxSteps: 10,
