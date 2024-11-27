@@ -2,6 +2,8 @@
 
 import 'dotenv/config'
 
+import { execSync } from 'node:child_process'
+
 import { createOpenAI } from '@ai-sdk/openai'
 import { confirm, log, outro, select, spinner, text } from '@clack/prompts'
 import { CoreMessage, generateText } from 'ai'
@@ -48,30 +50,46 @@ console.log()
 
 const OPENAI_API_KEY =
   process.env.OPENAI_API_KEY ||
-  ((await text({
-    message: dedent`
-      Please provide your OpenAI API key. 
-      
-      To skip this message, set ${chalk.bold('OPENAI_API_KEY')} env variable, and run again. 
-      
-      You can do it in three ways:
-      - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
-        ${chalk.gray(`\`\`\`
-          OPENAI_API_KEY=<your-key>
-          \`\`\`
-        `)}
-      - by passing it inline:
-        ${chalk.gray(`\`\`\`
-          OPENAI_API_KEY=<your-key> npx cali
-          \`\`\`
-        `)}
-      - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
-        ${chalk.gray(`\`\`\`
-          export OPENAI_API_KEY=<your-key>
-          \`\`\`
-        `)}
-    `,
-  })) as string)
+  (await (async () => {
+    let apiKey: string | symbol
+    do {
+      apiKey = await text({
+        message: dedent`
+          ${chalk.bold('Please provide your OpenAI API key.')}
+
+          To skip this message, set ${chalk.bold('OPENAI_API_KEY')} env variable, and run again. 
+          
+          You can do it in three ways:
+          - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
+            ${chalk.gray(`\`\`\`
+              OPENAI_API_KEY=<your-key>
+              \`\`\`
+            `)}
+          - by passing it inline:
+            ${chalk.gray(`\`\`\`
+              OPENAI_API_KEY=<your-key> npx cali
+              \`\`\`
+            `)}
+          - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
+            ${chalk.gray(`\`\`\`
+              export OPENAI_API_KEY=<your-key>
+              \`\`\`
+            `)},
+          `,
+      })
+    } while (typeof apiKey !== 'string')
+
+    const save = await confirm({
+      message: 'Do you want to save it for future runs in `.env.local`?',
+    })
+
+    if (save) {
+      execSync(`echo "OPENAI_API_KEY=${apiKey}" >> .env.local`)
+      execSync(`echo ".env.local" >> .gitignore`)
+    }
+
+    return apiKey
+  })())
 
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
