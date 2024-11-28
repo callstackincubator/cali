@@ -45,7 +45,6 @@ export const getReactNativeConfig = tool({
     Returns:
       - "root" - root directory of the project
       - "path" - path to React Native CLI installation
-      - "version" - React Native version
       - "platforms" - available platforms
       - "project" - project configuration per platform
 
@@ -68,17 +67,10 @@ export const getReactNativeConfig = tool({
   parameters: z.object({}),
   execute: async () => {
     try {
-      const {
-        root,
-        reactNativePath: path,
-        reactNativeVersion: version,
-        project,
-        platforms,
-      } = await loadReactNativeConfig()
+      const { root, reactNativePath: path, project, platforms } = await loadReactNativeConfig()
       return {
         root,
         path,
-        version,
         project,
         platforms,
       }
@@ -135,6 +127,82 @@ export const listReactNativeLibraries = tool({
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : 'Failed to start Metro bundler',
+      }
+    }
+  },
+})
+
+export const getReactNativeReleases = tool({
+  description: dedent`
+    Gets releases of React Native from GitHub.
+
+    When upgrading React Native, ask user to select a version from the list.
+
+    RnDiffApp is the name of the app that generates diffs between two versions of React Native.
+
+    Make sure to replace RnDiffApp with the actual name of the app in the response.
+  `,
+  parameters: z.object({}),
+  execute: async () => {
+    try {
+      const response = await fetch(`https://api.github.com/repos/facebook/react-native/releases`)
+      const list = await response.json()
+
+      const mappedList = list
+        .filter((release: any) => !release.prerelease)
+        .map((release: any) => ({
+          name: release.name,
+          tag: release.tag_name,
+        }))
+
+      return {
+        success: true,
+        action: dedent`
+          Ask user to select a version from the list.
+        `,
+        releases: mappedList,
+      }
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Failed to retrieve versions',
+      }
+    }
+  },
+})
+
+export const upgradeReactNativeDiff = tool({
+  description: dedent`
+    Upgrade React Native diff tool, returns a diff between two versions of React Native.
+
+    Parameters:
+      - "from" - source version, (Read the exact version from package.json using "readFile" tool). Example: "0.75.0"
+      - "to" - target version (latest React Native version). Example: "0.76.3"
+
+    Returns: 
+      - "diff" - diff between two versions, containing differences in the project files you need to apply. Make sure to apply it 2 levels deep in the project tree.
+                 When applying the diff, make sure to ask user for confirmation before proceeding. Don't read the files before applying the diff just apply it.
+  `,
+  parameters: z.object({
+    from: z.string(),
+    to: z.string(),
+  }),
+  execute: async ({ from, to }) => {
+    try {
+      const response = await fetch(
+        `https://raw.githubusercontent.com/react-native-community/rn-diff-purge/diffs/diffs/${from}..${to}.diff`
+      )
+      const diff = await response.text()
+
+      return {
+        success: true,
+        action: dedent`
+          Go over user file tree and apply diffs to the project.
+        `,
+        diff,
+      }
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Failed to retrieve diff',
       }
     }
   },
