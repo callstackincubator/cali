@@ -1,0 +1,46 @@
+{
+  "name": "cali",
+  "type": "module",
+  "bin": {
+    "cali": "./dist/cli.js"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.2",
+    "@cali/tools-react-native": "workspace:*",
+    "@clack/prompts": "^0.8.1",
+    "ai": "^4.0.3",
+    "chalk": "^5.3.0",
+    "dedent": "^1.5.3",
+    "dotenv": "^16.4.5",
+    "gradient-string": "^3.0.0",
+    "zod": "^3.23.8"
+  },
+  "bugs": {
+    "url": "https://github.com/callstackincubator/cali/issues"
+  },
+  "homepage": "https://github.com/callstackincubator/cali/#readme",
+  "author": "Mike Grabowski <mike@callstack.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/cali.git"
+  },
+  "contributors": [
+    "Oskar Kwasniewski <oskarkwasniewski@icloud.com> (https://github.com/okwasniewski)"
+  ],
+  "keywords": [
+    "react-native",
+    "ai",
+    "agent",
+    "vercel ai"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "license": "MIT",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

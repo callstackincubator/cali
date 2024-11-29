@@ -5,6 +5,7 @@ import 'dotenv/config'
 import { execSync } from 'node:child_process'
 
 import { createOpenAI } from '@ai-sdk/openai'
+import * as tools from '@cali/tools-react-native'
 import { confirm, log, outro, select, spinner, text } from '@clack/prompts'
 import { CoreMessage, generateText } from 'ai'
 import chalk from 'chalk'
@@ -13,7 +14,6 @@ import { retro } from 'gradient-string'
 import { z } from 'zod'
 
 import { reactNativePrompt } from './prompt'
-import * as tools from './tools'
 
 const MessageSchema = z.union([
   z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),

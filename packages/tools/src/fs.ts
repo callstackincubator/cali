@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile as readFileNode, writeFile } from 'node:fs/promises'
+import { extname } from 'node:path'
 
 import { tool } from 'ai'
-import { extname } from 'node:path'
 import { z } from 'zod'
 
 const fileEncodingSchema = z

@@ -1,5 +1,5 @@
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index 6d9d7ffa9c78b51a208a04189d842186a34e78cd..384a9e508f8a089c96f578e7f47a66f204c9e2c7 100644
+index 6d9d7ffa9c78b51a208a04189d842186a34e78cd..24aede8005b530445fb0788fefe53d98bd9ab2fc 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -1558,6 +1558,10 @@ changing the tool call and result types in the result.
@@ -7,7 +7,7 @@ index 6d9d7ffa9c78b51a208a04189d842186a34e78cd..384a9e508f8a089c96f578e7f47a66f2
      experimental_activeTools?: Array<keyof TOOLS>;
      /**
 +    Callback that is called when each step (LLM call) is started
-+    */
++     */
 +    onStepStart?: (toolCalls: ToolCallArray<TOOLS>) => Promise<void> | void;
 +    /**
      Callback that is called when each step (LLM call) is finished, including intermediate steps.
@@ -34,7 +34,7 @@ index f8002b76aae8e7b915b7a16b3c9ff68063e9e78a..dff50cb864846302688f22ea8aa68965
            toolCalls: currentToolCalls,
            tools,
 diff --git a/dist/index.mjs b/dist/index.mjs
-index 667c98e17072b65f29597277a734127f69fdc83b..8d0bb29e5309978da1cf3a0ffb6cc28dae3c54c3 100644
+index 667c98e17072b65f29597277a734127f69fdc83b..586f1082a0c4bf21f04af47031b0d41dc4d5c028 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -3230,6 +3230,7 @@ async function generateText({

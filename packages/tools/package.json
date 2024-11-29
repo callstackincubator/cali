@@ -1,0 +1,51 @@
+{
+  "name": "@cali/tools-react-native",
+  "description": "Tools to build your own AI agent with React Native capabilities.",
+  "module": "src/index.ts",
+  "exports": {
+    "bun": "./src/index.ts",
+    "default": "./dist/index.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.2",
+    "@clack/prompts": "^0.8.1",
+    "@react-native-community/cli": "^15.1.2",
+    "@react-native-community/cli-config": "^15.1.2",
+    "@react-native-community/cli-platform-android": "^15.1.2",
+    "@react-native-community/cli-platform-apple": "^15.1.2",
+    "ai": "4.0.3",
+    "dedent": "^1.5.3",
+    "diff": "^7.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@react-native-community/cli-types": "^15.1.2",
+    "@types/diff": "^6.0.0"
+  },
+  "author": "Mike Grabowski <mike@callstack.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/cali.git"
+  },
+  "contributors": [
+    "Oskar Kwasniewski <oskarkwasniewski@icloud.com> (https://github.com/okwasniewski)"
+  ],
+  "keywords": [
+    "react-native",
+    "ai",
+    "tools",
+    "vercel ai"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "vendor",
+    "README.md"
+  ],
+  "license": "MIT",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

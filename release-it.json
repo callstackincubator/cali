@@ -3,16 +3,15 @@
     "commitMessage": "chore: release v${version}",
     "tagName": "v${version}"
   },
-  "npm": {
-    "publish": true
-  },
-  "github": {
-    "release": true,
-    "releaseName": "v${version}"
-  },
+  "npm": false,
   "plugins": {
     "@release-it/conventional-changelog": {
       "preset": "angular"
+    },
+    "@release-it-plugins/workspaces": {
+      "workspaces": [
+        "packages/*"
+      ]
     }
   }
 }

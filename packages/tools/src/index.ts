@@ -1,5 +1,6 @@
 export * from './android'
 export * from './apple'
 export * from './fs'
+export * from './git'
 export * from './npm'
 export * from './react-native'

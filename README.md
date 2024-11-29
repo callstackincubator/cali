@@ -22,15 +22,17 @@ Cali is an AI agent that helps you build React Native apps. It takes all the uti
 
 Thanks to that, an LLM can help you with your React Native app development, without the need to remember commands, spending time troubleshooting errors, and in the future, much more.
 
-Under the hood, it uses [Vercel AI SDK](https://github.com/ai-sdk/ai), [@react-native-community/cli](https://github.com/react-native-community/cli).
+## How can I use it?
 
-The default model is `gpt-4o`.
+You can use Cali in two ways:
 
-> [!NOTE]
-> You can change the default model by setting `AI_MODEL` env variable. We are currently
-evaluating how different models perform, so we might change the default model in the future.
+- [`cali`](./packages/cali/README.md) - AI agent that runs in your terminal. Ready to use out of the box.
+- [`@cali/tools-react-native`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
+- [`@cali/mcp-server`](./packages/mcp-server/README.md) - (soon) [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
 
-## Features
+Under the hood, it uses [@react-native-community/cli](https://github.com/react-native-community/cli).
+
+## What can it do?
 
 Cali is still in the early stages of development, but it already supports:
 
@@ -39,13 +41,7 @@ Cali is still in the early stages of development, but it already supports:
 - **Dependency Management**: Install and manage npm packages and CocoaPods dependencies.
 - **React Native Library Search**: Searching and listing React Native libraries from [React Native Directory](https://reactnative.directory)
 
-as well as various smaller utilities:
-
-- **Port Forwarding**: Use ADB to forward ports for Android devices.
-- **Ruby Gems Installation**: Install Ruby gems, including CocoaPods, for iOS projects.
-- **Metro Bundler**: Automatically start Metro bundler for React Native projects.
-
-We are actively working on expanding its capabilities. If you would like to request a feature, please open an issue.
+You can learn more about available tools [here](./packages/tools/README.md).
 
 ## Examples
 
@@ -65,42 +61,11 @@ We are actively working on expanding its capabilities. If you would like to requ
 
 [TBD]
 
-## Prerequisites
-
-In order to use Cali, you need to have an OpenAI API key. You can get one [here](https://platform.openai.com/api-keys). Once you have your key, you can set it as `OPENAI_API_KEY` env variable (either create a dotenv file or set it inline).
-
-> [!NOTE]
-> In the future, you will be able to change the provider from OpenAI to other, including local and self-hosted models. If you are interested in this feature, please open an issue so we can prioritize it and make sure it brings the best DX.
-
-## Usage
-
-Under the hood, Cali uses Vercel AI SDK. That means you can import all its tools into your existing project and use them for different purposes, without our interactive chat interface.
-
-```ts
-// import all tools
-import { reactNativeTools, androidTools, iosTools } from "cali";
-
-// use them in your project
-import { generateText } from "ai";
-await generateText({
-  // other options
-  tools: {
-    ...reactNativeTools,
-    ...androidTools,
-    ...iosTools,
-  },
-});
-```
-
 ## Future requests
 
 I like the idea of an AI agent for building React Native apps. I would like to play around with this idea in public, and see where it goes.
 
 Feel free to open an issue or a discussion to suggest ideas or report bugs. Happy to hear from you! 👋
-
-## Special thanks
-
-Special thanks to [@jedirandy](https://github.com/jedirandy) for donating the name `cali` on `npm`!
 
 ## Made with ❤️ at Callstack
 

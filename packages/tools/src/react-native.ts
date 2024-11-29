@@ -7,7 +7,7 @@ import { tool } from 'ai'
 import dedent from 'dedent'
 import { z } from 'zod'
 
-import { loadReactNativeConfig } from './vendor-rncli'
+import { loadReactNativeConfig } from '../vendor/react-native-cli'
 
 export const startMetroDevServer = tool({
   description: dedent`
