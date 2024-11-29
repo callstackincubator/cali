@@ -13,10 +13,7 @@ import { retro } from 'gradient-string'
 import { z } from 'zod'
 
 import { reactNativePrompt } from './prompt'
-import * as androidTools from './tools/android'
-import * as iosTools from './tools/apple'
-import * as npmTools from './tools/npm'
-import * as reactNativeTools from './tools/react-native'
+import * as tools from './tools'
 
 const MessageSchema = z.union([
   z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),
@@ -117,13 +114,6 @@ const messages: CoreMessage[] = [
     content: question,
   },
 ]
-
-const tools = {
-  ...reactNativeTools,
-  ...iosTools,
-  ...androidTools,
-  ...npmTools,
-}
 
 const s = spinner()
 
