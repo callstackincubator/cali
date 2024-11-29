@@ -53,7 +53,7 @@ export const unInstallNpmPackage = tool({
       }
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : 'Failed to install package',
+        error: error instanceof Error ? error.message : 'Failed to uninstall package',
       }
     }
   },
@@ -78,7 +78,7 @@ export const getFileTree = tool({
       }
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : 'File to get file tree',
+        error: error instanceof Error ? error.message : 'Failed to get file tree',
       }
     }
   },
@@ -100,7 +100,7 @@ export const readFile = tool({
       }
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : 'File to get file tree',
+        error: error instanceof Error ? error.message : 'Failed to read file',
       }
     }
   },
