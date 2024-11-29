@@ -1,51 +1,80 @@
+import { mkdir, readdir, readFile as readFileNode, writeFile } from 'node:fs/promises'
+import { extname } from 'node:path'
+
 import { tool } from 'ai'
-import { execSync } from 'child_process'
-import fs from 'fs'
 import { z } from 'zod'
 
-export const getFileTree = tool({
-  description:
-    'Get user file tree, can be used to determine the package.json location, package manager, etc.',
-  parameters: z.object({
-    depth: z.number().optional().default(1),
-  }),
-  execute: async ({ depth }) => {
-    try {
-      const output = execSync(`tree -J -I "node_modules|cache|*.pyc" -L ${depth}`, {
-        cwd: process.cwd(),
-      }).toString()
-      const fileTree = JSON.parse(output)
+const fileEncodingSchema = z
+  .enum([
+    'ascii',
+    'utf8',
+    'utf-8',
+    'utf16le',
+    'utf-16le',
+    'ucs2',
+    'ucs-2',
+    'base64',
+    'base64url',
+    'latin1',
+    'binary',
+    'hex',
+  ])
+  .default('utf-8')
 
-      return {
-        success: true,
-        fileTree,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'File to get file tree',
-      }
-    }
+export const listFiles = tool({
+  description:
+    'List all files in a directory. If path is nested, you must call it separately for each segment',
+  parameters: z.object({ path: z.string() }),
+  execute: async ({ path }) => {
+    return readdir(path)
+  },
+})
+
+export const currentDirectory = tool({
+  description: 'Get the current working directory',
+  parameters: z.object({}),
+  execute: async () => {
+    return process.cwd()
+  },
+})
+
+export const makeDirectory = tool({
+  description: 'Create a new directory',
+  parameters: z.object({ path: z.string() }),
+  execute: async ({ path }) => {
+    return mkdir(path)
   },
 })
 
 export const readFile = tool({
-  description: 'Read file, can be used to read package.json, etc.',
-  parameters: z.object({
-    filePath: z.string(),
-    encoding: z.enum(['utf8', 'base64']).optional().default('utf8'),
-  }),
-  execute: async ({ filePath, encoding }) => {
-    try {
-      const content = fs.readFileSync(filePath, encoding)
-
+  description: 'Reads a file at a given path',
+  parameters: z.object({ path: z.string(), is_image: z.boolean(), encoding: fileEncodingSchema }),
+  execute: async ({ path, is_image, encoding }) => {
+    const file = await readFileNode(path, { encoding })
+    if (is_image) {
       return {
-        success: true,
-        file: content,
+        data: file,
+        mimeType: `image/${extname(path).toLowerCase().replace('.', '')}`,
       }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'File to get file tree',
-      }
+    } else {
+      return file
     }
+  },
+  experimental_toToolResultContent(result) {
+    return typeof result === 'string'
+      ? [{ type: 'text', text: result }]
+      : [{ type: 'image', data: result.data, mimeType: result.mimeType }]
+  },
+})
+
+export const saveFile = tool({
+  description: 'Save a file at a given path',
+  parameters: z.object({
+    path: z.string(),
+    content: z.string(),
+    encoding: fileEncodingSchema,
+  }),
+  execute: async ({ path, content, encoding }) => {
+    return writeFile(path, content, { encoding })
   },
 })
