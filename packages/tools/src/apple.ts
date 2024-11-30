@@ -21,7 +21,7 @@ export const getAppleSimulators = tool({
   }),
   execute: async ({ platform }) => {
     const sdkNames = getPlatformInfo(platform as ApplePlatform).sdkNames
-    await listAppleDevices(sdkNames)
+    return listAppleDevices(sdkNames)
   },
 })
 

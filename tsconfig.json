@@ -9,7 +9,10 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "paths": {
+      "@cali/tools-react-native": ["./packages/tools/src"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
