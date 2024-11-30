@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-import * as tools from '@cali/tools-react-native'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
+import * as tools from 'cali-tools'
 import zodToJsonSchema from 'zod-to-json-schema'
 
 const server = new Server(
   {
-    name: '@cali/mcp-server',
+    name: 'cali-mcp-server',
     version: '0.1.0',
   },
   {

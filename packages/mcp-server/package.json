@@ -1,16 +1,16 @@
 {
-  "name": "@cali/mcp-server",
-  "description": "A MCP server for React Native development",
+  "name": "cali-mcp-server",
+  "description": "A MCP server with tools for application development",
   "type": "module",
   "bin": {
-    "mcp-server-react-native": "./dist/index.js"
+    "cali-mcp-server": "./dist/index.js"
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node",
     "inspector": "npx @modelcontextprotocol/inspector bun src/index.ts"
   },
   "dependencies": {
-    "@cali/tools-react-native": "0.2.0",
+    "cali-tools": "0.2.0",
     "@modelcontextprotocol/sdk": "0.6.0",
     "zod-to-json-schema": "^3.23.5"
   },

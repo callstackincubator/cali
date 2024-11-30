@@ -11,7 +11,7 @@
     "esModuleInterop": true,
     "outDir": "dist",
     "paths": {
-      "@cali/tools-react-native": ["./packages/tools/src"]
+      "cali-tools": ["./packages/tools/src"]
     }
   },
   "include": ["src/**/*.ts"]

@@ -1,6 +1,6 @@
 {
-  "name": "@cali/tools-react-native",
-  "description": "Tools to build your own AI agent with React Native capabilities.",
+  "name": "cali-tools",
+  "description": "Tools to build your own AI agents for application development.",
   "type": "module",
   "exports": {
     ".": {

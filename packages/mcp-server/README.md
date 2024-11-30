@@ -1,4 +1,4 @@
-# @cali/mcp-server
+# cali-mcp-server
 
 > [!NOTE]
 > This package is not yet released. It is a work in progress.
