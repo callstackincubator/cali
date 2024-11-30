@@ -5,8 +5,10 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "bun run build:tools && bun run build:cli",
+    "prepare": "bun run build:tools && bun run build:mcp-server && bun run build:cli",
     "build:tools": "bun build ./packages/tools/src/index.ts --outdir ./packages/tools/dist --target node --packages external",
+    "build:mcp-server": "bun build ./packages/mcp-server/src/index.ts --outdir ./packages/mcp-server/dist --target node",
+    "build:tools-types": "tsc --emitDeclarationOnly --outDir ./packages/tools/dist --project",
     "build:cli": "bun build ./packages/cali/src/cli.ts --outdir ./packages/cali/dist --target node",
     "release": "release-it"
   },

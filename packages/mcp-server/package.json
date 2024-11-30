@@ -1,6 +1,39 @@
 {
   "name": "@cali/mcp-server",
-  "private": true,
+  "description": "A MCP server for React Native development",
   "module": "src/index.ts",
-  "version": "0.1.0"
+  "type": "module",
+  "bin": {
+    "mcp-server-react-native": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
+  },
+  "dependencies": {
+    "@cali/tools-react-native": "0.1.0",
+    "@modelcontextprotocol/sdk": "0.6.0",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "author": "Mike Grabowski <mike@callstack.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/cali.git"
+  },
+  "keywords": [
+    "react-native",
+    "ai",
+    "mcp server",
+    "model context protocol"
+  ],
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "license": "MIT",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  }
 }
