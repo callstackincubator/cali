@@ -10,7 +10,7 @@
     "inspector": "npx @modelcontextprotocol/inspector bun src/index.ts"
   },
   "dependencies": {
-    "cali-tools": "0.2.0",
+    "cali-tools": "0.2.1",
     "@modelcontextprotocol/sdk": "0.6.0",
     "zod-to-json-schema": "^3.23.5"
   },
@@ -31,7 +31,7 @@
     "README.md"
   ],
   "license": "MIT",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "engines": {
     "node": ">=22"
   }
