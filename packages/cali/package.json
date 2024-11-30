@@ -11,7 +11,7 @@
     "@ai-sdk/openai": "^1.0.2",
     "@clack/prompts": "^0.8.1",
     "ai": "^4.0.3",
-    "cali-tools": "0.2.2",
+    "cali-tools": "0.2.3",
     "chalk": "^5.3.0",
     "dedent": "^1.5.3",
     "dotenv": "^16.4.5",
@@ -42,7 +42,7 @@
     "README.md"
   ],
   "license": "MIT",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "engines": {
     "node": ">=22"
   }
