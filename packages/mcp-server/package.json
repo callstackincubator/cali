@@ -1,13 +1,12 @@
 {
   "name": "@cali/mcp-server",
   "description": "A MCP server for React Native development",
-  "module": "src/index.ts",
   "type": "module",
   "bin": {
     "mcp-server-react-native": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', '755')\"",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
     "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
   },
   "dependencies": {
@@ -35,5 +34,12 @@
   "version": "0.1.0",
   "engines": {
     "node": ">=22"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      ["module", { "esm": true }]
+    ]
   }
 }

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as tools from '@cali/tools-react-native'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -23,7 +25,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: Object.entries(tools).map(([name, tool]) => ({
       name,
-      description: tool.description,
+      description: 'description' in tool ? tool.description : '',
       inputSchema: zodToJsonSchema(tool.parameters),
     })),
   }
@@ -41,6 +43,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     const args = tool.parameters.parse(request.params.arguments)
+
+    // @ts-ignore
     const result = await tool.execute(args, {
       messages: [],
     })

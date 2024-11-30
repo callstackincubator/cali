@@ -1,17 +1,6 @@
 {
   "name": "@cali/root",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {
-    "prepare": "bun run build:tools && bun run build:mcp-server && bun run build:cli",
-    "build:tools": "bun build ./packages/tools/src/index.ts --outdir ./packages/tools/dist --target node --packages external",
-    "build:mcp-server": "bun build ./packages/mcp-server/src/index.ts --outdir ./packages/mcp-server/dist --target node",
-    "build:tools-types": "tsc --emitDeclarationOnly --outDir ./packages/tools/dist --project",
-    "build:cli": "bun build ./packages/cali/src/cli.ts --outdir ./packages/cali/dist --target node",
-    "release": "release-it"
-  },
+  "version": "0.1.0",
   "devDependencies": {
     "@release-it-plugins/workspaces": "^4.2.0",
     "@release-it/conventional-changelog": "^9.0.3",
@@ -24,13 +13,24 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-simple-import-sort": "^12.0.0",
     "prettier": "^3.2.5",
+    "react-native-builder-bob": "^0.33.3",
     "release-it": "^17.10.0",
     "typescript": "^5.1.3",
     "vitest": "^2.1.1"
   },
+  "license": "MIT",
   "patchedDependencies": {
     "ai@4.0.3": "patches/ai@4.0.3.patch"
   },
-  "license": "MIT",
-  "version": "0.1.0"
+  "private": true,
+  "scripts": {
+    "prepare": "bun run build:tools && bun run build:mcp-server && bun run build:cli",
+    "build:tools": "cd packages/tools && bun run build",
+    "build:mcp-server": "cd packages/mcp-server && bun run build",
+    "build:cli": "cd packages/cali && bun run build",
+    "release": "release-it"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }
