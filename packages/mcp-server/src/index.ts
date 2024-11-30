@@ -43,12 +43,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     const args = tool.parameters.parse(request.params.arguments)
-
     // @ts-ignore
     const result = await tool.execute(args, {
       messages: [],
     })
-
+    // tbd: unify return types of all tools, so this is not needed
+    if (typeof result === 'object' && 'error' in result) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: result.error,
+          },
+        ],
+      }
+    }
+    // tbd: handle images
     return {
       content: [
         {
@@ -58,9 +69,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       ],
     }
   } catch (error) {
-    throw new Error(
-      `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    )
+    return {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        },
+      ],
+    }
   }
 })
 

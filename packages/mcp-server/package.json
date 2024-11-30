@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node",
-    "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
+    "inspector": "npx @modelcontextprotocol/inspector bun src/index.ts"
   },
   "dependencies": {
     "@cali/tools-react-native": "0.1.0",
