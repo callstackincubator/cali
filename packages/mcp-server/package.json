@@ -6,7 +6,7 @@
     "cali-mcp-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --packages external",
     "inspector": "npx @modelcontextprotocol/inspector bun src/index.ts"
   },
   "dependencies": {
