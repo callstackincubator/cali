@@ -13,6 +13,5 @@
     "paths": {
       "cali-tools": ["./packages/tools/src"]
     }
-  },
-  "include": ["src/**/*.ts"]
+  }
 }

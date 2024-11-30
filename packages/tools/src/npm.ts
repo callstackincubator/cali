@@ -1,7 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 
-import { install, installDev, uninstall } from '../vendor/react-native-cli'
+import { install, installDev, uninstall } from './vendor/react-native-cli'
 
 export const installNpmPackage = tool({
   description: 'Install a package from npm by name',

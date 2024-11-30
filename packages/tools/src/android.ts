@@ -10,8 +10,8 @@ import {
   getTaskNames,
   tryLaunchAppOnDevice,
   tryLaunchEmulator,
-} from '../vendor/react-native-cli'
-import { adb, getAdbPathString, getEmulatorName } from '../vendor/react-native-cli'
+} from './vendor/react-native-cli'
+import { adb, getAdbPathString, getEmulatorName } from './vendor/react-native-cli'
 
 export const getAdbPath = tool({
   description: 'Returns path to ADB executable',
