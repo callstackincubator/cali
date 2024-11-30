@@ -47,7 +47,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const result = await tool.execute(args, {
       messages: [],
     })
-    // tbd: unify return types of all tools, so this is not needed
+    /**
+     * Our convention for errors is to return an object with an `error` property.
+     */
     if (typeof result === 'object' && 'error' in result) {
       return {
         isError: true,
@@ -59,12 +61,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       }
     }
-    // tbd: handle images
+    /**
+     * If the tool has an experimental_toToolResultContent method, we use it to format the result.
+     * This is useful for tools that return images.
+     */
+    if (tool.experimental_toToolResultContent) {
+      // @ts-ignore
+      const content = tool.experimental_toToolResultContent(result)
+      return {
+        content,
+      }
+    }
+    /**
+     * Each tool returns a JSON object, which we convert to a text block.
+     */
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(result, null, 2),
+          text: JSON.stringify(result),
         },
       ],
     }
