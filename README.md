@@ -30,8 +30,6 @@ You can use Cali in two ways:
 - [`@cali/tools-react-native`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
 - [`@cali/mcp-server`](./packages/mcp-server/README.md) - (soon) [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
 
-Under the hood, it uses [@react-native-community/cli](https://github.com/react-native-community/cli).
-
 ## What can it do?
 
 Cali is still in the early stages of development, but it already supports:
