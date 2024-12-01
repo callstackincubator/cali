@@ -1,13 +1,13 @@
-import {
-  findDevServerPort,
-  getDefaultUserTerminal,
-  startServerInNewWindow,
-} from '@react-native-community/cli-tools'
 import { tool } from 'ai'
 import dedent from 'dedent'
 import { z } from 'zod'
 
-import { loadReactNativeConfig } from './vendor/react-native-cli'
+import {
+  findDevServerPort,
+  getDefaultUserTerminal,
+  loadReactNativeConfig,
+  startServerInNewWindow,
+} from './vendor/react-native-cli'
 
 export const startMetroDevServer = tool({
   description: dedent`

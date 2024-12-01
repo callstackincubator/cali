@@ -1,6 +1,7 @@
+import fs from 'node:fs'
+
 import { tool } from 'ai'
 import { applyPatch } from 'diff'
-import fs from 'fs'
 import { z } from 'zod'
 
 export const applyDiff = tool({

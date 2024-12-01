@@ -2,8 +2,8 @@ import { tool } from 'ai'
 import { execSync } from 'child_process'
 import { z } from 'zod'
 
-import type { ApplePlatform } from './vendor/react-native-cli'
 import {
+  ApplePlatform,
   createAppleBuild,
   createAppleRun,
   createLogCommand,
