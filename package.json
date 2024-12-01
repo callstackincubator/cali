@@ -1,6 +1,6 @@
 {
   "name": "@cali/root",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "devDependencies": {
     "@release-it-plugins/workspaces": "^4.2.0",
     "@release-it/conventional-changelog": "^9.0.3",
