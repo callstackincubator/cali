@@ -27,4 +27,3 @@ export default defineConfig({
     },
   ],
 })
-console.log(dependencies)

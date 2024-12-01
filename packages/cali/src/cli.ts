@@ -13,7 +13,7 @@ import dedent from 'dedent'
 import { retro } from 'gradient-string'
 import { z } from 'zod'
 
-import { reactNativePrompt } from './prompt'
+import { reactNativePrompt } from './prompt.js'
 
 const MessageSchema = z.union([
   z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),

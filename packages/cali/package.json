@@ -1,11 +1,13 @@
 {
   "name": "cali",
   "bin": {
-    "cali": "./dist/cli.js"
+    "cali": "./dist/index.js"
   },
   "type": "module",
   "scripts": {
-    "build": "rslib build"
+    "build": "rslib build",
+    "dev": "node --import=tsx ./src/cli.ts",
+    "start": "node ./dist/index.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.2",

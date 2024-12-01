@@ -7,7 +7,7 @@ import {
   getDefaultUserTerminal,
   loadReactNativeConfig,
   startServerInNewWindow,
-} from './vendor/react-native-cli'
+} from './vendor/react-native-cli.js'
 
 export const startMetroDevServer = tool({
   description: dedent`

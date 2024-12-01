@@ -10,7 +10,7 @@ import {
   getPlatformInfo,
   listAppleDevices,
   loadReactNativeConfig,
-} from './vendor/react-native-cli'
+} from './vendor/react-native-cli.js'
 
 const platforms = ['ios', 'tvos', 'visionos'] as const
 

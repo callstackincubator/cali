@@ -21,16 +21,7 @@ export { getPlatformInfo } from '@react-native-community/cli-platform-apple/buil
  * from within an ESM module.
  *
  * Source: https://esbuild.github.io/content-types/#default-interop
- *
- * We keep conditional since we're using Bun in development that uses Babel-approach and resolves
- * default exports correctly.
  */
-function resolveDefault<T>(mod: T | { default: T }): T {
-  return (mod as any).default ?? mod
-}
-
-// Import modules
-// tbd: TypeScript should be configured to warn that it won't work without `resolveDefault`
 import adbModule from '@react-native-community/cli-platform-android/build/commands/runAndroid/adb.js'
 import getAdbPathStringModule from '@react-native-community/cli-platform-android/build/commands/runAndroid/getAdbPath.js'
 import tryLaunchAppOnDeviceModule from '@react-native-community/cli-platform-android/build/commands/runAndroid/tryLaunchAppOnDevice.js'
@@ -40,15 +31,14 @@ import createLogCommandModule from '@react-native-community/cli-platform-apple/b
 import createAppleRunModule from '@react-native-community/cli-platform-apple/build/commands/runCommand/createRun.js'
 import listAppleDevicesModule from '@react-native-community/cli-platform-apple/build/tools/listDevices.js'
 
-// Export resolved defaults
-export const adb = resolveDefault(adbModule)
-export const getAdbPathString = resolveDefault(getAdbPathStringModule)
-export const tryLaunchAppOnDevice = resolveDefault(tryLaunchAppOnDeviceModule)
-export const tryLaunchEmulator = resolveDefault(tryLaunchEmulatorModule)
-export const createAppleBuild = resolveDefault(createAppleBuildModule)
-export const createLogCommand = resolveDefault(createLogCommandModule)
-export const createAppleRun = resolveDefault(createAppleRunModule)
-export const listAppleDevices = resolveDefault(listAppleDevicesModule)
+export const adb = adbModule.default
+export const getAdbPathString = getAdbPathStringModule.default
+export const tryLaunchAppOnDevice = tryLaunchAppOnDeviceModule.default
+export const tryLaunchEmulator = tryLaunchEmulatorModule.default
+export const createAppleBuild = createAppleBuildModule.default
+export const createLogCommand = createLogCommandModule.default
+export const createAppleRun = createAppleRunModule.default
+export const listAppleDevices = listAppleDevicesModule.default
 
 /** Export publicly-exported functions */
 export {
@@ -58,7 +48,7 @@ export {
 } from '@react-native-community/cli-tools'
 
 /** Export types */
-export type { ApplePlatform } from '@react-native-community/cli-platform-apple/build/types'
+export type { ApplePlatform } from '@react-native-community/cli-platform-apple/build/types.js'
 export type { Config } from '@react-native-community/cli-types'
 
 /** Helpers */
