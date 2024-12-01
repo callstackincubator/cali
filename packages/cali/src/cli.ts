@@ -94,125 +94,127 @@ const openai = createOpenAI({
   apiKey: OPENAI_API_KEY,
 })
 
-const question = await text({
-  message: 'What do you want to do today?',
-  placeholder: 'e.g. "Build the app" or "See available simulators"',
-})
+;(async () => {
+  const question = await text({
+    message: 'What do you want to do today?',
+    placeholder: 'e.g. "Build the app" or "See available simulators"',
+  })
 
-if (typeof question === 'symbol') {
-  outro(chalk.gray('Bye!'))
-  process.exit(0)
-}
+  if (typeof question === 'symbol') {
+    outro(chalk.gray('Bye!'))
+    process.exit(0)
+  }
 
-const messages: CoreMessage[] = [
-  {
-    role: 'system',
-    content: 'What do you want to do today?',
-  },
-  {
-    role: 'user',
-    content: question,
-  },
-]
+  const messages: CoreMessage[] = [
+    {
+      role: 'system',
+      content: 'What do you want to do today?',
+    },
+    {
+      role: 'user',
+      content: question,
+    },
+  ]
 
-const s = spinner()
+  const s = spinner()
 
-// eslint-disable-next-line no-constant-condition
-while (true) {
-  s.start(chalk.gray('Thinking...'))
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    s.start(chalk.gray('Thinking...'))
 
-  const response = await generateText({
-    model: openai(AI_MODEL),
-    system: reactNativePrompt,
-    tools,
-    maxSteps: 10,
-    messages,
-    onStepStart(toolCalls) {
-      if (toolCalls.length > 0) {
-        const message = `Executing: ${chalk.gray(toolCalls.map((toolCall) => toolCall.toolName).join(', '))}`
+    const response = await generateText({
+      model: openai(AI_MODEL),
+      system: reactNativePrompt,
+      tools,
+      maxSteps: 10,
+      messages,
+      onStepStart(toolCalls) {
+        if (toolCalls.length > 0) {
+          const message = `Executing: ${chalk.gray(toolCalls.map((toolCall) => toolCall.toolName).join(', '))}`
 
-        let spinner = s.message
-        for (const toolCall of toolCalls) {
-          /**
-           * Certain tools call external helpers outside of our control that pipe output to our stdout.
-           * In such case, we stop the spinner to avoid glitches and display the output instead.
-           */
-          if (
-            [
-              'buildAndroidApp',
-              'launchAndroidAppOnDevice',
-              'installNpmPackage',
-              'uninstallNpmPackage',
-            ].includes(toolCall.toolName)
-          ) {
-            spinner = s.stop
-            break
+          let spinner = s.message
+          for (const toolCall of toolCalls) {
+            /**
+             * Certain tools call external helpers outside of our control that pipe output to our stdout.
+             * In such case, we stop the spinner to avoid glitches and display the output instead.
+             */
+            if (
+              [
+                'buildAndroidApp',
+                'launchAndroidAppOnDevice',
+                'installNpmPackage',
+                'uninstallNpmPackage',
+              ].includes(toolCall.toolName)
+            ) {
+              spinner = s.stop
+              break
+            }
+          }
+
+          spinner(message)
+        }
+      },
+    })
+
+    const toolCalls = response.steps.flatMap((step) =>
+      step.toolCalls.map((toolCall) => toolCall.toolName)
+    )
+
+    if (toolCalls.length > 0) {
+      s.stop(`Tools called: ${chalk.gray(toolCalls.join(', '))}`)
+    } else {
+      s.stop(chalk.gray('Done.'))
+    }
+
+    for (const step of response.steps) {
+      if (step.text.length > 0) {
+        messages.push({ role: 'assistant', content: step.text })
+      }
+      if (step.toolCalls.length > 0) {
+        messages.push({ role: 'assistant', content: step.toolCalls })
+      }
+      if (step.toolResults.length > 0) {
+        // tbd: fix this upstream. for some reason, the tool does not include the type,
+        // against the spec.
+        for (const toolResult of step.toolResults) {
+          if (!toolResult.type) {
+            toolResult.type = 'tool-result'
           }
         }
-
-        spinner(message)
+        messages.push({ role: 'tool', content: step.toolResults })
       }
-    },
-  })
-
-  const toolCalls = response.steps.flatMap((step) =>
-    step.toolCalls.map((toolCall) => toolCall.toolName)
-  )
-
-  if (toolCalls.length > 0) {
-    s.stop(`Tools called: ${chalk.gray(toolCalls.join(', '))}`)
-  } else {
-    s.stop(chalk.gray('Done.'))
-  }
-
-  for (const step of response.steps) {
-    if (step.text.length > 0) {
-      messages.push({ role: 'assistant', content: step.text })
     }
-    if (step.toolCalls.length > 0) {
-      messages.push({ role: 'assistant', content: step.toolCalls })
-    }
-    if (step.toolResults.length > 0) {
-      // tbd: fix this upstream. for some reason, the tool does not include the type,
-      // against the spec.
-      for (const toolResult of step.toolResults) {
-        if (!toolResult.type) {
-          toolResult.type = 'tool-result'
+
+    // tbd: handle parsing errors
+    const data = MessageSchema.parse(JSON.parse(response.text))
+
+    const answer = await (() => {
+      switch (data.type) {
+        case 'select':
+          return select({
+            message: data.content,
+            options: data.options.map((option) => ({ value: option, label: option })),
+          })
+        case 'question':
+          return text({ message: data.content })
+        case 'confirmation': {
+          return confirm({ message: data.content }).then((answer) => {
+            return answer ? 'yes' : 'no'
+          })
         }
+        case 'end':
+          log.step(data.content)
       }
-      messages.push({ role: 'tool', content: step.toolResults })
+    })()
+
+    if (typeof answer !== 'string') {
+      outro(chalk.gray('Bye!'))
+      break
     }
+
+    messages.push({
+      role: 'user',
+      content: answer as string,
+    })
   }
-
-  // tbd: handle parsing errors
-  const data = MessageSchema.parse(JSON.parse(response.text))
-
-  const answer = await (() => {
-    switch (data.type) {
-      case 'select':
-        return select({
-          message: data.content,
-          options: data.options.map((option) => ({ value: option, label: option })),
-        })
-      case 'question':
-        return text({ message: data.content })
-      case 'confirmation': {
-        return confirm({ message: data.content }).then((answer) => {
-          return answer ? 'yes' : 'no'
-        })
-      }
-      case 'end':
-        log.step(data.content)
-    }
-  })()
-
-  if (typeof answer !== 'string') {
-    outro(chalk.gray('Bye!'))
-    break
-  }
-
-  messages.push({
-    role: 'user',
-    content: answer as string,
-  })
-}
+})()

@@ -1,11 +1,10 @@
 {
   "name": "cali",
-  "type": "module",
   "bin": {
     "cali": "./dist/cli.js"
   },
   "scripts": {
-    "build": "bun build ./src/cli.ts --outdir ./dist --target node"
+    "build": "bun build ./src/cli.ts --outdir ./dist --target node --format cjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.2",

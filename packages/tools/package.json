@@ -1,7 +1,13 @@
 {
   "name": "cali-tools",
   "description": "Tools to build your own AI agents for application development.",
-  "bun": "./src/index.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/typescript/commonjs/index.d.ts",
+      "default": "./dist/commonjs/index.js"
+    }
+  },
   "main": "./dist/commonjs/index.js",
   "types": "./dist/typescript/commonjs/index.d.ts",
   "scripts": {
@@ -44,7 +50,7 @@
     "README.md"
   ],
   "license": "MIT",
-  "version": "0.2.3",
+  "version": "0.2.2",
   "engines": {
     "node": ">=22"
   },
