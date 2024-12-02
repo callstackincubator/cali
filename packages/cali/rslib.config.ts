@@ -2,6 +2,10 @@ import { defineConfig } from '@rslib/core'
 
 import { dependencies } from './package.json'
 
+/**
+ * We need to bundle `ai` dependency with the CLI, because we have custom patch for it.
+ * We delete `ai` from dependencies that are passed as `externals`.
+ */
 // @ts-ignore
 delete dependencies.ai
 
