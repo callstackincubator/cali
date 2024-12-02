@@ -8,7 +8,7 @@
   "scripts": {
     "build": "rslib build",
     "dev": "node --import=tsx ./src/index.ts",
-    "inspector": "npx @modelcontextprotocol/inspector bun src/index.ts"
+    "inspector": "npx @modelcontextprotocol/inspector node --import=tsx ./src/index.ts"
   },
   "dependencies": {
     "cali-tools": "0.2.4",
