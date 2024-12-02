@@ -1,17 +1,22 @@
 {
   "name": "cali-tools",
   "description": "Tools to build your own AI agents for application development.",
+  "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
-      "types": "./dist/typescript/commonjs/index.d.ts",
-      "default": "./dist/commonjs/index.js"
+      "source": "./src/index.ts",
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js"
     }
   },
-  "main": "./dist/commonjs/index.js",
-  "types": "./dist/typescript/commonjs/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
   "scripts": {
-    "build": "bob build"
+    "build": "bun run build:lib && bun run build:types",
+    "build:lib": "rslib build",
+    "build:types": "tsc --emitDeclarationOnly --declaration --outdir dist/types"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.2",
@@ -53,23 +58,5 @@
   "version": "0.2.4",
   "engines": {
     "node": ">=22"
-  },
-  "react-native-builder-bob": {
-    "source": "src",
-    "output": "dist",
-    "targets": [
-      [
-        "commonjs",
-        {
-          "esm": true
-        }
-      ],
-      [
-        "typescript",
-        {
-          "esm": true
-        }
-      ]
-    ]
   }
 }

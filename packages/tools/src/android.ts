@@ -1,17 +1,19 @@
 import { tryRunAdbReverse } from '@react-native-community/cli-platform-android'
 import { tool } from 'ai'
+import { execSync } from 'child_process'
 import dedent from 'dedent'
+import { EOL } from 'os'
 import { z } from 'zod'
 
 import {
+  adb,
   build,
+  getAdbPathString,
   getEmulators,
-  getPhoneName,
   getTaskNames,
   tryLaunchAppOnDevice,
   tryLaunchEmulator,
-} from './vendor/react-native-cli'
-import { adb, getAdbPathString, getEmulatorName } from './vendor/react-native-cli'
+} from './vendor/react-native-cli.js'
 
 export const getAdbPath = tool({
   description: 'Returns path to ADB executable',
@@ -179,3 +181,20 @@ export const launchAndroidAppOnDevice = tool({
     }
   },
 })
+
+function getEmulatorName(adbPath: string, deviceId: string) {
+  const buffer = execSync(`${adbPath} -s ${deviceId} emu avd name`)
+  return buffer
+    .toString()
+    .split(EOL)[0]
+    .replace(/(\r\n|\n|\r)/gm, '')
+    .trim()
+}
+
+function getPhoneName(adbPath: string, deviceId: string) {
+  const buffer = execSync(`${adbPath} -s ${deviceId} shell getprop | grep ro.product.model`)
+  return buffer
+    .toString()
+    .replace(/\[ro\.product\.model\]:\s*\[(.*)\]/, '$1')
+    .trim()
+}

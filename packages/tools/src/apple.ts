@@ -2,15 +2,15 @@ import { tool } from 'ai'
 import { execSync } from 'child_process'
 import { z } from 'zod'
 
-import type { ApplePlatform } from './vendor/react-native-cli'
 import {
+  ApplePlatform,
   createAppleBuild,
   createAppleRun,
   createLogCommand,
   getPlatformInfo,
   listAppleDevices,
   loadReactNativeConfig,
-} from './vendor/react-native-cli'
+} from './vendor/react-native-cli.js'
 
 const platforms = ['ios', 'tvos', 'visionos'] as const
 
