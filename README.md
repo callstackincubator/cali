@@ -24,11 +24,11 @@ Thanks to that, an LLM can help you with your React Native app development, with
 
 ## How can I use it?
 
-You can use Cali in two ways:
+You can use Cali in three ways:
 
-- [`cali`](./packages/cali/README.md) - AI agent that runs in your terminal. Ready to use out of the box.
-- [`cali-tools`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
-- [`cali-mcp-server`](./packages/mcp-server/README.md) - (soon) [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
+- **standalone** - [`cali`](./packages/cali/README.md) - AI agent that runs in your terminal. Ready to use out of the box.
+- **with Vercel AI SDK** - [`cali-tools`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
+- **with Claude, Zed, and other MCP Clients** - [`cali-mcp-server`](./packages/mcp-server/README.md) - [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
 
 ## What can it do?
 

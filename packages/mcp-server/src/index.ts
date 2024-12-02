@@ -19,6 +19,13 @@ const server = new Server(
 )
 
 /**
+ * Set the working directory to the root of the filesystem.
+ */
+if (process.env.FILESYSTEM_ROOT) {
+  process.chdir(process.env.FILESYSTEM_ROOT)
+}
+
+/**
  * Handler for listing available tools
  */
 server.setRequestHandler(ListToolsRequestSchema, async () => {
