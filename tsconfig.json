@@ -10,9 +10,6 @@
     "esModuleInterop": true,
     "outDir": "dist",
     "resolveJsonModule": true,
-    "customConditions": ["source"],
-    "paths": {
-      "cali-tools": ["./packages/tools/src"]
-    }
+    "customConditions": ["source"]
   }
 }
