@@ -9,6 +9,7 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "outDir": "dist",
+    "customConditions": ["source"],
     "paths": {
       "cali-tools": ["./packages/tools/src"]
     }

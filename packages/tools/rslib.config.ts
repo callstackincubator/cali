@@ -10,6 +10,7 @@ export default defineConfig({
       },
       format: 'esm',
       output: {
+        externals: [/react-native-community/],
         distPath: {
           root: 'dist',
         },
@@ -23,6 +24,7 @@ export default defineConfig({
       },
       format: 'cjs',
       output: {
+        externals: [/react-native-community/],
         distPath: {
           root: 'dist',
         },
