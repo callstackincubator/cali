@@ -1,6 +1,6 @@
 {
   "name": "@cali/root",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "devDependencies": {
     "@release-it-plugins/workspaces": "^4.2.0",
     "@release-it/conventional-changelog": "^9.0.3",
@@ -37,12 +37,37 @@
   "release-it": {
     "git": {
       "commitMessage": "chore: release v${version}",
-      "tagName": "v${version}"
+      "tagName": "v${version}",
+      "requireCleanWorkingDir": false
     },
     "npm": false,
+    "github": {
+      "release": true
+    },
+    "hooks": {
+      "before:release": "bun run build"
+    },
     "plugins": {
       "@release-it/conventional-changelog": {
-        "preset": "angular"
+        "preset": "angular",
+        "types": [
+          {
+            "type": "feat",
+            "section": "✨ Features"
+          },
+          {
+            "type": "fix",
+            "section": "🐛 Bug Fixes"
+          },
+          {
+            "type": "chore(deps)",
+            "section": "🛠️ Dependency Upgrades"
+          },
+          {
+            "type": "docs",
+            "section": "📚 Documentation"
+          }
+        ]
       },
       "@release-it-plugins/workspaces": {
         "workspaces": [
