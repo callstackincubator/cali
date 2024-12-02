@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "rslib build",
+    "dev": "node --import=tsx ./src/index.ts",
     "inspector": "npx @modelcontextprotocol/inspector bun src/index.ts"
   },
   "dependencies": {
