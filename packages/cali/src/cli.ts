@@ -5,7 +5,7 @@ import 'dotenv/config'
 import { execSync } from 'node:child_process'
 
 import { createOpenAI } from '@ai-sdk/openai'
-import { confirm, log, outro, select, spinner, text } from '@clack/prompts'
+import { confirm, outro, select, spinner, text } from '@clack/prompts'
 import { CoreMessage, generateText } from 'ai'
 import * as tools from 'cali-tools'
 import chalk from 'chalk'
@@ -19,10 +19,15 @@ const MessageSchema = z.union([
   z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),
   z.object({ type: z.literal('question'), content: z.string() }),
   z.object({ type: z.literal('confirmation'), content: z.string() }),
-  z.object({ type: z.literal('end'), content: z.string() }),
+  z.object({ type: z.literal('end') }),
 ])
 
 console.clear()
+
+// tbd: better error handling
+process.on('uncaughtException', (error) => {
+  console.error(chalk.red(error.message))
+})
 
 console.log(
   retro(`
@@ -42,8 +47,6 @@ console.log(
     Powered by: ${chalk.bold('Vercel AI SDK')} & ${chalk.bold('React Native CLI')}
   `)
 )
-
-console.log()
 
 const OPENAI_API_KEY =
   process.env.OPENAI_API_KEY ||
@@ -94,26 +97,31 @@ const openai = createOpenAI({
   apiKey: OPENAI_API_KEY,
 })
 
-const question = await text({
-  message: 'What do you want to do today?',
-  placeholder: 'e.g. "Build the app" or "See available simulators"',
-})
+async function startSession(): Promise<CoreMessage[]> {
+  const question = await text({
+    message: 'What do you want to do today?',
+    placeholder: 'e.g. "Build the app" or "See available simulators"',
+    validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
+  })
 
-if (typeof question === 'symbol') {
-  outro(chalk.gray('Bye!'))
-  process.exit(0)
+  if (typeof question === 'symbol') {
+    outro(chalk.gray('Bye!'))
+    process.exit(0)
+  }
+
+  return [
+    {
+      role: 'system',
+      content: 'What do you want to do today?',
+    },
+    {
+      role: 'user',
+      content: question,
+    },
+  ]
 }
 
-const messages: CoreMessage[] = [
-  {
-    role: 'system',
-    content: 'What do you want to do today?',
-  },
-  {
-    role: 'user',
-    content: question,
-  },
-]
+let messages = await startSession()
 
 const s = spinner()
 
@@ -195,20 +203,21 @@ while (true) {
           options: data.options.map((option) => ({ value: option, label: option })),
         })
       case 'question':
-        return text({ message: data.content })
+        return text({
+          message: data.content,
+          validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
+        })
       case 'confirmation': {
         return confirm({ message: data.content }).then((answer) => {
           return answer ? 'yes' : 'no'
         })
       }
-      case 'end':
-        log.step(data.content)
     }
   })()
 
   if (typeof answer !== 'string') {
-    outro(chalk.gray('Bye!'))
-    break
+    messages = await startSession()
+    continue
   }
 
   messages.push({

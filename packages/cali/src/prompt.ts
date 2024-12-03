@@ -19,7 +19,6 @@ export const reactNativePrompt = dedent`
     - If you need more information, ask a follow-up question.
     - Never build or run for multiple platforms simultaneously.
     - If user selects "Debug" mode, always start Metro bundler using "startMetro" tool.
-    - Never end session, unless user confirms they do not want to continue.
 
   ERROR HANDLING:
     - If a tool call returns an error, you must explain the error to the user and ask user if they want to try again:
@@ -43,7 +42,7 @@ export const reactNativePrompt = dedent`
 
       - If user confirms, you must re-run the same tool.
       - Never ask user to perform the action manually. Instead, ask user to fix the error, so you can run the tool again.
-      - If single tool fails more than 3 times, proceed with NEXT TASK.
+      - If single tool fails more than 3 times, you must end the session.
 
   RESPONSE FORMAT:
     - Your response must be a valid JSON object.
@@ -67,16 +66,10 @@ export const reactNativePrompt = dedent`
         "type": "confirmation",
         "content": "<question>"
       }
-    - When you finish processing user task, you must ask user a confirmation if they want to continue with another task:
-      {
-        "type": "confirmation",
-        "content": "<question>"
-      }
-    - If user does not want to continue, you must return "end" type.
+    - When you finish processing user task, you must answer with:
       {
         "type": "end",
-        "content": "<result>"
-      } 
+      }
   
   EXAMPLES:
     <example>
