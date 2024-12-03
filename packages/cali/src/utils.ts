@@ -38,10 +38,14 @@ export async function getApiKey(name: string, key: string) {
             `)},
           `,
       })
-    } while (typeof apiKey !== 'string')
+    } while (typeof apiKey === 'undefined')
+
+    if (typeof apiKey === 'symbol') {
+      process.exit(0)
+    }
 
     const save = await confirm({
-      message: 'Do you want to save it for future runs in `.env.local`?',
+      message: `Do you want to save it for future runs in .env.local?`,
     })
 
     if (save) {

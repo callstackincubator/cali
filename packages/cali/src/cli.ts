@@ -47,7 +47,7 @@ console.log()
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
 const openai = createOpenAI({
-  apiKey: await getApiKey('OpenAI', 'OPENAI_API_KEY'),
+  apiKey: await getApiKey('OpenAI', 'OPENAI_API_K2EY'),
 })
 
 const question = await text({
