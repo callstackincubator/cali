@@ -24,9 +24,9 @@ const MessageSchema = z.union([
 
 console.clear()
 
-// tbd: better error handling
 process.on('uncaughtException', (error) => {
   console.error(chalk.red(error.message))
+  console.log(chalk.gray(error.stack))
 })
 
 console.log(
@@ -49,7 +49,7 @@ console.log(
 )
 
 const OPENAI_API_KEY =
-  process.env.OPENdAI_API_KEY ||
+  process.env.OPENAI_API_KEY ||
   (await (async () => {
     const apiKey = await text({
       message: dedent`
