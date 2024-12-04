@@ -37,10 +37,12 @@ export async function getApiKey(name: string, key: string) {
               \`\`\`
             `)},
           `,
+        validate: (value) => (value.length > 0 ? undefined : `Please provide a valid ${key}.`),
       })
     } while (typeof apiKey === 'undefined')
 
     if (typeof apiKey === 'symbol') {
+      outro(chalk.gray('Bye!'))
       process.exit(0)
     }
 
