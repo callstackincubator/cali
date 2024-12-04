@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process'
 
-import { confirm, text } from '@clack/prompts'
+import { confirm, outro, text } from '@clack/prompts'
 import chalk from 'chalk'
 import dedent from 'dedent'
 
