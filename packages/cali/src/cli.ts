@@ -49,35 +49,38 @@ console.log(
 )
 
 const OPENAI_API_KEY =
-  process.env.OPENAI_API_KEY ||
+  process.env.OPENdAI_API_KEY ||
   (await (async () => {
-    let apiKey: string | symbol
-    do {
-      apiKey = await text({
-        message: dedent`
-          ${chalk.bold('Please provide your OpenAI API key.')}
+    const apiKey = await text({
+      message: dedent`
+        ${chalk.bold('Please provide your OpenAI API key.')}
 
-          To skip this message, set ${chalk.bold('OPENAI_API_KEY')} env variable, and run again. 
-          
-          You can do it in three ways:
-          - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
-            ${chalk.gray(`\`\`\`
-              OPENAI_API_KEY=<your-key>
-              \`\`\`
-            `)}
-          - by passing it inline:
-            ${chalk.gray(`\`\`\`
-              OPENAI_API_KEY=<your-key> npx cali
-              \`\`\`
-            `)}
-          - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
-            ${chalk.gray(`\`\`\`
-              export OPENAI_API_KEY=<your-key>
-              \`\`\`
-            `)},
-          `,
-      })
-    } while (typeof apiKey !== 'string')
+        To skip this message, set ${chalk.bold('OPENAI_API_KEY')} env variable, and run again. 
+        
+        You can do it in three ways:
+        - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
+          ${chalk.gray(`\`\`\`
+            OPENAI_API_KEY=<your-key>
+            \`\`\`
+          `)}
+        - by passing it inline:
+          ${chalk.gray(`\`\`\`
+            OPENAI_API_KEY=<your-key> npx cali
+            \`\`\`
+          `)}
+        - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
+          ${chalk.gray(`\`\`\`
+            export OPENAI_API_KEY=<your-key>
+            \`\`\`
+          `)},
+        `,
+      validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
+    })
+
+    if (typeof apiKey === 'symbol') {
+      outro(chalk.gray('Bye!'))
+      process.exit(0)
+    }
 
     const save = await confirm({
       message: 'Do you want to save it for future runs in `.env.local`?',
