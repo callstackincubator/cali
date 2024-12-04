@@ -98,6 +98,10 @@ const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
 const openai = createOpenAI({
   apiKey: OPENAI_API_KEY,
+  baseURL: 'https://ai.callstack.com/',
+  headers: {
+    'Helicone-Base-Url': 'https://oai.helicone.ai/v1',
+  },
 })
 
 async function startSession(): Promise<CoreMessage[]> {
