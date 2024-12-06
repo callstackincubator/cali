@@ -47,7 +47,7 @@ console.log(
 
 console.log()
 
-import model from './model.js'
+import model from './model-ollama.js'
 
 async function startSession(): Promise<CoreMessage[]> {
   const question = await text({
