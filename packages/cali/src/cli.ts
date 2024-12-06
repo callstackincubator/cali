@@ -2,7 +2,6 @@
 
 import 'dotenv/config'
 
-import { createOpenAI } from '@ai-sdk/openai'
 import { confirm, outro, select, spinner, text } from '@clack/prompts'
 import { CoreMessage, generateText } from 'ai'
 import * as tools from 'cali-tools'
@@ -12,7 +11,6 @@ import { retro } from 'gradient-string'
 import { z } from 'zod'
 
 import { reactNativePrompt } from './prompt.js'
-import { getApiKey } from './utils.js'
 
 const MessageSchema = z.union([
   z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),
@@ -49,11 +47,7 @@ console.log(
 
 console.log()
 
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
-
-const openai = createOpenAI({
-  apiKey: await getApiKey('OpenAI', 'OPENAI_API_K2EY'),
-})
+import model from './model-ollama.js'
 
 async function startSession(): Promise<CoreMessage[]> {
   const question = await text({
@@ -88,7 +82,7 @@ while (true) {
   s.start(chalk.gray('Thinking...'))
 
   const response = await generateText({
-    model: openai(AI_MODEL),
+    model,
     system: reactNativePrompt,
     tools,
     maxSteps: 10,

@@ -18,6 +18,7 @@
     "dedent": "^1.5.3",
     "dotenv": "^16.4.5",
     "gradient-string": "^3.0.0",
+    "ollama-ai-provider": "^1.0.0",
     "zod": "^3.23.8"
   },
   "bugs": {
