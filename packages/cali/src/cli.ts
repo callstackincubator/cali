@@ -3,7 +3,7 @@
 import 'dotenv/config'
 
 import { createOpenAI } from '@ai-sdk/openai'
-import { confirm, outro, select, spinner, text } from '@clack/prompts'
+import { log, outro, select, spinner, text } from '@clack/prompts'
 import { CoreMessage, generateText } from 'ai'
 import * as tools from 'cali-tools'
 import chalk from 'chalk'
@@ -11,14 +11,13 @@ import dedent from 'dedent'
 import { retro } from 'gradient-string'
 import { z } from 'zod'
 
-import { reactNativePrompt } from './prompt.js'
+import { systemPrompt } from './prompt.js'
 import { getApiKey } from './utils.js'
 
 const MessageSchema = z.union([
   z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),
   z.object({ type: z.literal('question'), content: z.string() }),
-  z.object({ type: z.literal('confirmation'), content: z.string() }),
-  z.object({ type: z.literal('end') }),
+  z.object({ type: z.literal('end'), content: z.string() }),
 ])
 
 console.clear()
@@ -52,7 +51,7 @@ console.log()
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
 const openai = createOpenAI({
-  apiKey: await getApiKey('OpenAI', 'OPENAI_API_K2EY'),
+  apiKey: await getApiKey('OpenAI', 'OPENAI_API_KEY'),
 })
 
 async function startSession(): Promise<CoreMessage[]> {
@@ -89,7 +88,7 @@ while (true) {
 
   const response = await generateText({
     model: openai(AI_MODEL),
-    system: reactNativePrompt,
+    system: systemPrompt,
     tools,
     maxSteps: 10,
     messages,
@@ -165,11 +164,12 @@ while (true) {
           message: data.content,
           validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
         })
-      case 'confirmation': {
-        return confirm({ message: data.content }).then((answer) => {
-          return answer ? 'yes' : 'no'
+      case 'end':
+        log.info(data.content)
+        return text({
+          message: 'What do you want to do next?',
+          validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
         })
-      }
     }
   })()
 
