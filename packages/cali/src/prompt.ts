@@ -33,76 +33,14 @@ export const reactNativePrompt = dedent`
         "options": ["<option1>", "<option2>", "<option3>"]
       }
     
-    MANUAL RESOLUTION:
-      - If you do not have tools to fix the error, you must ask a Yes/No question with manual steps as content:
-        {
-          "type": "confirmation",
-          "content": "<error explanation and manual steps>"
-        }
-
-      - If user confirms, you must re-run the same tool.
-      - Never ask user to perform the action manually. Instead, ask user to fix the error, so you can run the tool again.
-      - If single tool fails more than 3 times, you must end the session.
-
-  RESPONSE FORMAT:
-    - Your response must be a valid JSON object.
-    - Your response must not contain any other text.
-    - Your response must start with { and end with }.
-
-  RESPONSE TYPES:
-    - If the question is a question that involves choosing from a list of options, you must return:
-      {
-        "type": "select",
-        "content": "<question>",
-        "options": ["<option1>", "<option2>", "<option3>"]
-      }
-    - If the question is a free-form question, you must return:
-      {
-        "type": "question",
-        "content": "<question>"
-      }
-    - If the question is a Yes/No or it is a confirmation question, you must return:
+  MANUAL RESOLUTION:
+    - If you do not have tools to fix the error, you must ask a Yes/No question with manual steps as content:
       {
         "type": "confirmation",
-        "content": "<question>"
+        "content": "<error explanation and manual steps>"
       }
-    - When you finish processing user task, you must answer with:
-      {
-        "type": "end",
-      }
-  
-  EXAMPLES:
-    <example>
-      <bad>
-        Here are some tasks you can perform:
 
-        1. Option 1
-        2. Option 2
-      </bad>
-      <good>
-        {
-          "type": "select",
-          "content": "Here are some tasks you can perform:",
-          "options": ["Option 1", "Option 2"]
-        }
-      </good>
-    </example>
-    <example>
-      <bad>
-        Please provide X so I can do Y.
-      </bad>
-      <good>
-        {
-          "type": "question",
-          "content": "Please provide X so I can do Y."
-        }
-      </good>
-    </example>
-    <example>
-      <bad>
-        Please provide path to ADB executable.
-      </bad>
-        Do not ask user to provide path to ADB executable.
-        Run "getAdbPath" tool and use its result.
-    </example>
+    - If user confirms, you must re-run the same tool.
+    - Never ask user to perform the action manually. Instead, ask user to fix the error, so you can run the tool again.
+    - If single tool fails more than 3 times, you must end the session.
 `
