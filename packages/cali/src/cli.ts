@@ -56,8 +56,10 @@ const openai = createOpenAI({
 })
 
 let sessionOngoing = true
-const chosenToolset = null
 let messages: CoreMessage[] = []
+const toolHand: toolbox.ToolHand = {
+  activeTool: null,
+}
 
 async function startSession(messages?: CoreMessage[]): Promise<CoreMessage[]> {
   let initialQuestion: CoreAssistantMessage
@@ -116,16 +118,12 @@ const finishSession = tool({
   },
 })
 
-const toolHand: toolbox.ToolHand = {
-  activeTool: null,
-}
-
 const gatherNewTool = toolbox.prepareToolbox(toolHand)
 
 // eslint-disable-next-line no-constant-condition
 while (sessionOngoing) {
   messages = await startSession(messages)
-
+  console.log(toolHand)
   s.start(chalk.gray('Thinking...'))
 
   const response = await generateText({
@@ -134,7 +132,7 @@ while (sessionOngoing) {
     tools: {
       ...userInteractionsToolset.makeInteractiveToolset(s),
       gatherNewTool,
-      ...(chosenToolset !== null ? toolbox[chosenToolset] : {}),
+      ...(toolHand.activeTool !== null ? toolbox.toolbox[toolHand.activeTool] : {}),
       finishSession,
     },
     maxSteps: 10,
