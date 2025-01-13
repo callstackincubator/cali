@@ -4,17 +4,9 @@ import 'dotenv/config'
 
 import { createOpenAI } from '@ai-sdk/openai'
 import { outro, spinner, text } from '@clack/prompts'
-import { CoreMessage, generateText } from 'ai'
+import { CoreAssistantMessage, CoreMessage, generateText } from 'ai'
 import { tool } from 'ai'
-import {
-  androidToolset,
-  appleToolset,
-  fileSystemToolset,
-  gitToolset,
-  npmToolset,
-  reactNativeToolset,
-  userInteractionsToolset,
-} from 'cali-tools'
+import { toolbox, userInteractionsToolset } from 'cali-tools'
 import chalk from 'chalk'
 import dedent from 'dedent'
 import { retro } from 'gradient-string'
@@ -28,6 +20,12 @@ console.clear()
 process.on('uncaughtException', (error) => {
   console.error(chalk.red(error.message))
   console.log(chalk.gray(error.stack))
+})
+
+process.on('SIGINT', function () {
+  console.log('Caught interrupt signal')
+
+  process.exit()
 })
 
 console.log(
@@ -51,25 +49,36 @@ console.log(
 
 console.log()
 
-const technicalToolsets = {
-  ...androidToolset,
-  ...appleToolset,
-  ...fileSystemToolset,
-  ...gitToolset,
-  ...npmToolset,
-  ...reactNativeToolset,
-}
-
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
 const openai = createOpenAI({
   apiKey: await getApiKey('OpenAI', 'OPENAI_API_KEY'),
 })
 
-async function startSession(): Promise<CoreMessage[]> {
+let sessionOngoing = true
+const chosenToolset = null
+let messages: CoreMessage[] = []
+
+async function startSession(messages?: CoreMessage[]): Promise<CoreMessage[]> {
+  let initialQuestion: CoreAssistantMessage
+  const lastMessage = messages?.at(-1)
+
+  if (lastMessage?.role === 'assistant') {
+    initialQuestion = {
+      role: 'assistant',
+      content: lastMessage.content,
+    }
+  } else {
+    initialQuestion = {
+      role: 'assistant',
+      content: 'What do you want to do today?',
+    }
+  }
+
   const question = await text({
-    message: 'What do you want to do today?',
-    placeholder: 'e.g. "Build the app" or "See available simulators"',
+    message: initialQuestion.content as string,
+    placeholder:
+      lastMessage?.role === 'assistant' ? '' : 'e.g. "Build the app" or "See available simulators"',
     validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
   })
 
@@ -79,10 +88,7 @@ async function startSession(): Promise<CoreMessage[]> {
   }
 
   return [
-    {
-      role: 'assistant',
-      content: 'What do you want to do today?',
-    },
+    ...(messages?.length ? [...messages] : [initialQuestion]),
     {
       role: 'user',
       content: question,
@@ -90,27 +96,36 @@ async function startSession(): Promise<CoreMessage[]> {
   ]
 }
 
-const messages = await startSession()
-let sessionOngoing = true
-
 const s = spinner()
 
 const finishSession = tool({
   description: 'Finish the session',
   parameters: z.object({
-    farewell_message: z.string().describe('You farewell message'),
+    restarting_for_tools: z.boolean().describe('Is session ending, or just more tools are needed'),
+    farewell_message: z.string().describe('Your farewell message if session is ending').optional(),
   }),
-  execute: async ({ farewell_message }) => {
+  execute: async ({ farewell_message, restarting_for_tools }) => {
+    if (restarting_for_tools) {
+      sessionOngoing = true
+      return 'Starting new session with more tools'
+    }
+
     sessionOngoing = false
-
     s.stop(farewell_message)
-
     return 'Session finished'
   },
 })
 
+const toolHand: toolbox.ToolHand = {
+  activeTool: null,
+}
+
+const gatherNewTool = toolbox.prepareToolbox(toolHand)
+
 // eslint-disable-next-line no-constant-condition
 while (sessionOngoing) {
+  messages = await startSession(messages)
+
   s.start(chalk.gray('Thinking...'))
 
   const response = await generateText({
@@ -118,7 +133,8 @@ while (sessionOngoing) {
     system: reactNativePrompt,
     tools: {
       ...userInteractionsToolset.makeInteractiveToolset(s),
-      ...technicalToolsets,
+      gatherNewTool,
+      ...(chosenToolset !== null ? toolbox[chosenToolset] : {}),
       finishSession,
     },
     maxSteps: 10,
@@ -132,7 +148,12 @@ while (sessionOngoing) {
 
   if (toolCalls.length > 0) {
     s.stop(`Tools called: ${chalk.gray(toolCalls.join(', '))}`)
-  } else {
+  }
+
+  if (!sessionOngoing) {
     s.stop(chalk.gray('Done.'))
+  } else {
+    s.stop()
+    messages.push({ role: 'assistant', content: response.text })
   }
 }
