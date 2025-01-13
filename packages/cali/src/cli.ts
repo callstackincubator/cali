@@ -5,12 +5,20 @@ import 'dotenv/config'
 import { createOpenAI } from '@ai-sdk/openai'
 import { outro, spinner, text } from '@clack/prompts'
 import { CoreMessage, generateText } from 'ai'
-import { userInteractionsToolset } from 'cali-tools'
+import { tool } from 'ai'
+import {
+  androidToolset,
+  appleToolset,
+  fileSystemToolset,
+  gitToolset,
+  npmToolset,
+  reactNativeToolset,
+  userInteractionsToolset,
+} from 'cali-tools'
 import chalk from 'chalk'
 import dedent from 'dedent'
 import { retro } from 'gradient-string'
 import { z } from 'zod'
-import { tool } from 'ai'
 
 import { reactNativePrompt } from './prompt.js'
 import { getApiKey } from './utils.js'
@@ -43,6 +51,15 @@ console.log(
 
 console.log()
 
+const technicalToolsets = {
+  ...androidToolset,
+  ...appleToolset,
+  ...fileSystemToolset,
+  ...gitToolset,
+  ...npmToolset,
+  ...reactNativeToolset,
+}
+
 const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
 
 const openai = createOpenAI({
@@ -73,22 +90,22 @@ async function startSession(): Promise<CoreMessage[]> {
   ]
 }
 
-let messages = await startSession()
-let sessionOngoing = true;
+const messages = await startSession()
+let sessionOngoing = true
 
 const s = spinner()
 
 const finishSession = tool({
   description: 'Finish the session',
   parameters: z.object({
-      farewell_message: z.string().describe("You farewell message"),
+    farewell_message: z.string().describe('You farewell message'),
   }),
   execute: async ({ farewell_message }) => {
     sessionOngoing = false
 
     s.stop(farewell_message)
 
-    return "Session finished";
+    return 'Session finished'
   },
 })
 
@@ -99,10 +116,14 @@ while (sessionOngoing) {
   const response = await generateText({
     model: openai(AI_MODEL),
     system: reactNativePrompt,
-    tools: { ...userInteractionsToolset.makeInteractiveToolset(s), finishSession },
+    tools: {
+      ...userInteractionsToolset.makeInteractiveToolset(s),
+      ...technicalToolsets,
+      finishSession,
+    },
     maxSteps: 10,
     messages,
-    toolChoice: "auto",
+    toolChoice: 'auto',
   })
 
   const toolCalls = response.steps.flatMap((step) =>
