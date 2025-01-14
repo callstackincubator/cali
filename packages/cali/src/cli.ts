@@ -9,7 +9,6 @@ import * as tools from 'cali-tools'
 import chalk from 'chalk'
 import dedent from 'dedent'
 import { retro } from 'gradient-string'
-import { isValid } from 'zod'
 
 import { reactNativePrompt } from './prompt.js'
 import { getApiKey } from './utils.js'
