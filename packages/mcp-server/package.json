@@ -6,9 +6,9 @@
     "cali-mcp-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "rslib build",
-    "dev": "node --import=tsx ./src/index.ts",
-    "inspector": "npx @modelcontextprotocol/inspector node --import=tsx ./src/index.ts"
+    "prepare": "bun run build",
+    "clean": "rm -rf dist",
+    "build": "tsup-node"
   },
   "dependencies": {
     "cali-tools": "0.3.1",

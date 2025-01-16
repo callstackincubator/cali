@@ -21,7 +21,25 @@ module.exports = {
       },
     ],
     'object-shorthand': ['error', 'always'],
-    'simple-import-sort/imports': 'error',
+    'simple-import-sort/imports': [
+      'error',
+      {
+        groups: [
+          // Node.js builtins
+          ['^node:'],
+          // External packages
+          ['^@?\\w'],
+          // Internal packages and cali-tools
+          ['^cali-tools'],
+          // Parent imports
+          ['^\\.\\.(?!/?$)', '^\\.\\./?$'],
+          // Other relative imports
+          ['^\\./(?=.*/)(?!/?$)', '^\\.(?!/?$)', '^\\./?$'],
+          // Style imports
+          ['^.+\\.s?css$'],
+        ],
+      },
+    ],
     'simple-import-sort/exports': 'error',
   },
   overrides: [

@@ -1,22 +1,15 @@
 import { openai } from '@ai-sdk/openai'
 import { confirm, select, text } from '@clack/prompts'
 import { tool } from 'ai'
-import {
-  bootAndroidEmulator,
-  bootAppleSimulator,
-  buildAndroidApp,
-  buildAppleAppWithoutStarting,
-  buildStartAppleApp,
-  getAdbPath,
-  getAndroidDevices,
-  getAppleSimulators,
-  getReactNativeConfig,
-  launchAndroidAppOnDevice,
-  runAdbReverse,
-  startMetroDevServer,
-} from 'cali-tools'
 import { agent } from 'workflows-ai'
 import { z } from 'zod'
+
+/**
+ * Tools
+ */
+import * as androidTools from 'cali-tools/android'
+import * as appleTools from 'cali-tools/apple'
+import { getReactNativeConfig, startMetroDevServer } from 'cali-tools/react-native'
 
 /**
  * Helper tool to throw errors when something wents wrong on the tool level.
@@ -99,9 +92,8 @@ export const reactNativeAgent = agent({
   `,
   model: openai('gpt-4o-mini'),
   tools: {
-    startMetroDevServer,
     getReactNativeConfig,
-    somethingWentWrong,
+    startMetroDevServer,
   },
 })
 
@@ -110,12 +102,7 @@ export const appleAgent = agent({
     You are a helpful assistant that helps with everything related to iOS.
   `,
   model: openai('gpt-4o-mini'),
-  tools: {
-    getAppleSimulators,
-    bootAppleSimulator,
-    buildAppleAppWithoutStarting,
-    buildStartAppleApp,
-  },
+  tools: appleTools,
 })
 
 export const androidAgent = agent({
@@ -123,12 +110,5 @@ export const androidAgent = agent({
     You are a helpful assistant that helps with everything related to Android.
   `,
   model: openai('gpt-4o-mini'),
-  tools: {
-    getAdbPath,
-    getAndroidDevices,
-    bootAndroidEmulator,
-    buildAndroidApp,
-    runAdbReverse,
-    launchAndroidAppOnDevice,
-  },
+  tools: androidTools,
 })

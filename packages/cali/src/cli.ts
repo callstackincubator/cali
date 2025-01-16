@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-
-import 'dotenv/config'
-
 import { log, spinner } from '@clack/prompts'
 import chalk from 'chalk'
 import dedent from 'dedent'
@@ -10,6 +7,8 @@ import { execute } from 'workflows-ai'
 
 import { androidAgent, appleAgent, reactNativeAgent, userInputAgent } from './agents.js'
 import { mainFlow } from './flows.js'
+
+import 'dotenv/config'
 
 console.clear()
 

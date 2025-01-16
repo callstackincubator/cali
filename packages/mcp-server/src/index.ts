@@ -3,8 +3,23 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import * as tools from 'cali-tools'
 import { zodToJsonSchema } from 'zod-to-json-schema'
+
+import * as androidTools from 'cali-tools/android'
+import * as appleTools from 'cali-tools/apple'
+import * as fsTools from 'cali-tools/fs'
+import * as gitTools from 'cali-tools/git'
+import * as npmTools from 'cali-tools/npm'
+import * as reactNativeTools from 'cali-tools/react-native'
+
+const tools = {
+  ...androidTools,
+  ...appleTools,
+  ...gitTools,
+  ...reactNativeTools,
+  ...fsTools,
+  ...npmTools,
+}
 
 const server = new Server(
   {

@@ -3,20 +3,15 @@
   "description": "Tools to build your own AI agents for application development.",
   "type": "module",
   "exports": {
-    ".": {
-      "source": "./src/index.ts",
-      "types": "./dist/types/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.js"
+    "./*": {
+      "source": "./src/*.ts",
+      "types": {
+        "import": "./dist/index.d.ts",
+        "require": "./dist/index.d.cts"
+      },
+      "require": "./dist/*.cjs",
+      "import": "./dist/*.js"
     }
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/types/index.d.ts",
-  "scripts": {
-    "build": "bun run build:lib && bun run build:types",
-    "build:lib": "rslib build",
-    "build:types": "tsc --emitDeclarationOnly --declaration --outdir dist/types"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.0.2",
@@ -58,5 +53,10 @@
   "version": "0.3.1",
   "engines": {
     "node": ">=22"
+  },
+  "scripts": {
+    "prepare": "bun run build",
+    "clean": "rm -rf dist",
+    "build": "tsup-node"
   }
 }

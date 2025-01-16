@@ -5,8 +5,8 @@ Collection of tools for building AI agents that work with React Native. Exported
 ## Usage
 
 ```ts
-// First, import all tools
-import * as tools from "cali-tools";
+// First, import the tools you want
+import * as reactNativeTools from "cali-tools/react-native";
 
 import { generateText } from "ai";
 await generateText({

@@ -1,6 +1,0 @@
-export * from './android.js'
-export * from './apple.js'
-export * from './fs.js'
-export * from './git.js'
-export * from './npm.js'
-export * from './react-native.js'
