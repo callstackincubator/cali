@@ -27,6 +27,67 @@ export const somethingWentWrong = tool({
   },
 })
 
+const askUserFromList = tool({
+  description: 'Ask the user to choose one of the provided options',
+  parameters: z.object({
+    question: z.string(),
+    options: z.array(
+      z.object({
+        value: z.string().describe('The value of the option'),
+        label: z.string().describe('The label that explains the value'),
+      })
+    ),
+  }),
+  execute: async ({ question, options }) => {
+    const answer = await select({
+      message: question,
+      options,
+    })
+    if (typeof answer !== 'string') {
+      throw new Error('User cancelled the operation')
+    }
+    return answer
+  },
+})
+
+const askUserOpenEndedQuestion = tool({
+  description: 'Ask the user to answer a question',
+  parameters: z.object({
+    question: z.string(),
+  }),
+  execute: async ({ question }) => {
+    const answer = await text({
+      message: question,
+    })
+    if (typeof answer !== 'string') {
+      throw new Error('User cancelled the operation')
+    }
+    return answer
+  },
+})
+
+const confirmWithUser = tool({
+  description: 'Ask the user to confirm something (yes/no)',
+  parameters: z.object({
+    question: z.string(),
+  }),
+  execute: async ({ question }) => {
+    const answer = await confirm({
+      message: question,
+    })
+    if (typeof answer !== 'boolean') {
+      throw new Error('User cancelled the operation')
+    }
+    return answer
+  },
+})
+
+const userInputTools = {
+  askUserOpenEndedQuestion,
+  askUserFromList,
+  confirmWithUser,
+}
+
 /**
  * Agent that ask the user for input.
  */
@@ -38,87 +99,73 @@ export const userInputAgent = agent({
     Do not create own questions or ask follow-up questions, unless you are explicitly asked to do so.
   `,
   model: openai('gpt-4o'),
-  tools: {
-    askOpenEndedUser: tool({
-      description: 'Ask the user to answer a question',
-      parameters: z.object({
-        question: z.string(),
-      }),
-      execute: async ({ question }) => {
-        const answer = await text({
-          message: question,
-        })
-        if (typeof answer !== 'string') {
-          throw new Error('User cancelled the operation')
-        }
-        return answer
-      },
-    }),
-    askUserFromList: tool({
-      description: 'Ask the user to choose one of the provided options',
-      parameters: z.object({
-        question: z.string(),
-        options: z.array(
-          z.object({
-            value: z.string().describe('The value of the option'),
-            label: z.string().describe('The label that explains the value'),
-          })
-        ),
-      }),
-      execute: async ({ question, options }) => {
-        const answer = await select({
-          message: question,
-          options,
-        })
-        if (typeof answer !== 'string') {
-          throw new Error('User cancelled the operation')
-        }
-        return answer
-      },
-    }),
-    confirmWithUser: tool({
-      description: 'Ask the user to confirm something (yes/no)',
-      parameters: z.object({
-        question: z.string(),
-      }),
-      execute: async ({ question }) => {
-        const answer = await confirm({
-          message: question,
-        })
-        if (typeof answer !== 'boolean') {
-          throw new Error('User cancelled the operation')
-        }
-        return answer
-      },
-    }),
-  },
+  tools: userInputTools,
 })
 
 export const reactNativeAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to React Native.
+    
     You do not know what platforms are available.
     You must run a tool to list available platforms.
+    If multiple platforms are available, you must ask the user to choose one, and include chosen platform in the final response.
+
+    If user chooses a platform, you must assume that platform for all operations.
   `,
   model: openai('gpt-4o'),
   tools: {
     getReactNativeConfig,
     startMetroDevServer,
+    ...userInputTools,
   },
 })
 
 export const appleAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to iOS.
+
+    When running an app on simulator, you must first check if the simulator is running.
+    If it is not, you must start it.
+
+    If there are multiple simulators or devices available, you must ask the user to choose one first.
   `,
   model: openai('gpt-4o'),
-  tools: appleTools,
+  tools: {
+    ...appleTools,
+    ...userInputTools,
+  },
 })
 
 export const androidAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to Android.
+
+    When running an app on emulator, you must first check if the emulator is running.
+    If it is not, you must start it.
+
+    If there are multiple emulators or devices available, you must ask the user to choose one first.
   `,
   model: openai('gpt-4o'),
-  tools: androidTools,
+  tools: {
+    ...androidTools,
+    ...userInputTools,
+  },
+})
+
+export const processAgent = agent({
+  system: `
+    You are a helpful assistant that helps with everything related to process.
+    You are given a command to execute.
+    You must execute the command and return the result.
+  `,
+  model: openai('gpt-4o'),
+  tools: {
+    exit: tool({
+      description: 'Exit the application',
+      parameters: z.object({}),
+      execute: () => {
+        process.exit(0)
+      },
+    }),
+  },
 })
