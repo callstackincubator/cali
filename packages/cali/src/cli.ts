@@ -54,12 +54,14 @@ try {
       userInputAgent,
       processAgent,
     },
-    onFlowStart(flow) {
+    onFlowStart(flow, ctx) {
+      console.log(ctx)
       if (flow.name) {
         log.info(chalk.gray(flow.name))
       }
     },
-    onFlowFinish(flow) {
+    onFlowFinish(flow, result) {
+      console.log(result)
       if (flow.name) {
         log.success(chalk.gray(flow.name))
       }
@@ -68,6 +70,4 @@ try {
   log.success(response)
 } catch (error) {
   log.error(String(error))
-} finally {
-  s.stop()
 }

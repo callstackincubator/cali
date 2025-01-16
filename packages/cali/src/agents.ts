@@ -96,7 +96,6 @@ export const userInputAgent = agent({
     Your job is to ask the user for input and return his answer as string.
     You choose the right tool to ask the user for input, depending on the type of question.
     If you are given multiple questions, you must ask them one by one, and return all answers.
-    Do not create own questions or ask follow-up questions, unless you are explicitly asked to do so.
   `,
   model: openai('gpt-4o'),
   tools: userInputTools,
@@ -108,9 +107,11 @@ export const reactNativeAgent = agent({
     
     You do not know what platforms are available.
     You must run a tool to list available platforms.
-    If multiple platforms are available, you must ask the user to choose one, and include chosen platform in the final response.
-
-    If user chooses a platform, you must assume that platform for all operations.
+    
+    If platform is already specified in context, you must use it.
+    If platform is not specified in context, you must ask the user to choose one and include chosen platform in the final response.
+    Use that platform for all operations.
+   
   `,
   model: openai('gpt-4o'),
   tools: {
@@ -123,11 +124,12 @@ export const reactNativeAgent = agent({
 export const appleAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to iOS.
-
+    
     When running an app on simulator, you must first check if the simulator is running.
     If it is not, you must start it.
-
+    
     If there are multiple simulators or devices available, you must ask the user to choose one first.
+    Do not ask the user if information is already provided in context.
   `,
   model: openai('gpt-4o'),
   tools: {
@@ -139,11 +141,12 @@ export const appleAgent = agent({
 export const androidAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to Android.
-
+   
     When running an app on emulator, you must first check if the emulator is running.
     If it is not, you must start it.
-
+   
     If there are multiple emulators or devices available, you must ask the user to choose one first.
+    Do not ask the user if information is already provided in context.
   `,
   model: openai('gpt-4o'),
   tools: {
