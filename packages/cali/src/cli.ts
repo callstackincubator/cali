@@ -54,14 +54,12 @@ try {
       userInputAgent,
       processAgent,
     },
-    onFlowStart(flow, ctx) {
-      console.log(ctx)
+    onFlowStart(flow) {
       if (flow.name) {
         log.info(chalk.gray(flow.name))
       }
     },
-    onFlowFinish(flow, result) {
-      console.log(result)
+    onFlowFinish(flow) {
       if (flow.name) {
         log.success(chalk.gray(flow.name))
       }

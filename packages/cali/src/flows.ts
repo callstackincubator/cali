@@ -51,17 +51,12 @@ export const mainFlow = {
     {
       agent: 'userInputAgent',
       input: `
-        Greet the user by saying random fun fact about React or React Native, then ask an open ended question about what they want to do today.
+        Greet the user and ask an open-ended question about what they want to do today.
 
         Your capabilities are:
-        - Running and/or building the application for Apple and Android platforms
+        - Running and/or building the React Native application for Apple and Android platforms
 
-        General rules:
-        - Return ONLY the user's decision without any additional commentary
-        - If user asks you to explain your capabilities, list them and then ask again
-        - If user asks for something outside your capabilities, return "exit"
-        - If user provides specific details, include them in brackets like [platform: iOS, device: simulator]
-        - Format all responses as "User selected to {action} [detail1: value1, detail2: value2]"
+        When user asks you to explain your capabilities, list them and then ask user to choose what they want to do.
       `,
     },
     {
@@ -69,12 +64,7 @@ export const mainFlow = {
       input: [
         {
           ...runApplicationFlow,
-          when: 'User selected to run the application on the selected platform',
-        },
-        {
-          agent: 'processAgent',
-          input: 'Exit',
-          when: 'User selected to exit',
+          when: 'run or build the application on any platform',
         },
       ],
     },

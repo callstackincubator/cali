@@ -96,6 +96,8 @@ export const userInputAgent = agent({
     Your job is to ask the user for input and return his answer as string.
     You choose the right tool to ask the user for input, depending on the type of question.
     If you are given multiple questions, you must ask them one by one, and return all answers.
+    You must return only user answers, without any unnecessary commentary.
+    You must include all the details in the answer.
   `,
   model: openai('gpt-4o'),
   tools: userInputTools,
@@ -111,7 +113,6 @@ export const reactNativeAgent = agent({
     If platform is already specified in context, you must use it.
     If platform is not specified in context, you must ask the user to choose one and include chosen platform in the final response.
     Use that platform for all operations.
-   
   `,
   model: openai('gpt-4o'),
   tools: {

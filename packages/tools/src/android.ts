@@ -27,7 +27,7 @@ export const getAndroidDevices = tool({
   description: dedent`
     Gets available Android devices and emulators.
 
-    Returns an array of devices:
+    Returns an array of devices with the following properties:
       - "id" - device ID
       - "name" - device name
       - "type" - device type ("device" or "emulator")
