@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { log, spinner } from '@clack/prompts'
+import { execute } from 'ai-flows'
 import chalk from 'chalk'
 import dedent from 'dedent'
 import { retro } from 'gradient-string'
-import { execute } from 'workflows-ai'
 
 import { androidAgent, appleAgent, reactNativeAgent, userInputAgent } from './agents.js'
 import { mainFlow } from './flows.js'
@@ -39,7 +39,10 @@ console.log(
 console.log()
 
 const s = spinner()
-s.start()
+
+s.start('Thinking...')
+
+const noisyFlows = ['startMetroServer', 'askUserToChooseFlow', 'askUserToChoosePlatform']
 
 try {
   const response = await execute(mainFlow, {
@@ -51,13 +54,16 @@ try {
     },
     onFlowStart(flow) {
       if (flow.name) {
-        if (
-          ['startMetroServer', 'askUserToChooseFlow', 'askUserToChoosePlatform'].includes(flow.name)
-        ) {
-          s.stop()
+        if (noisyFlows.includes(flow.name)) {
+          s.stop(flow.name)
         } else {
-          s.start(chalk.gray(flow.name))
+          s.message(chalk.gray(flow.name))
         }
+      }
+    },
+    onFlowFinish(flow) {
+      if (flow.name && noisyFlows.includes(flow.name)) {
+        s.start()
       }
     },
   })

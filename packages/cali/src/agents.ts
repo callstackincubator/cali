@@ -1,7 +1,7 @@
 import { openai } from '@ai-sdk/openai'
 import { confirm, select, text } from '@clack/prompts'
 import { tool } from 'ai'
-import { agent } from 'workflows-ai'
+import { agent } from 'ai-flows'
 import { z } from 'zod'
 
 /**
@@ -32,14 +32,12 @@ export const somethingWentWrong = tool({
  */
 export const userInputAgent = agent({
   system: `
-    You are a helpful assistant that asks the user for input.
-    You are given a question and you must ask the user for input.
-    You ask friendly and easy to understand questions.
+    Your job is to ask the user for input and return his answer as string.
     You choose the right tool to ask the user for input, depending on the type of question.
-    You always return the response in requested format.
-    If you need more information, ask a follow-up question.
+    If you are given multiple questions, you must ask them one by one, and return all answers.
+    Do not create own questions or ask follow-up questions, unless you are explicitly asked to do so.
   `,
-  model: openai('gpt-4o-mini'),
+  model: openai('gpt-4o'),
   tools: {
     askOpenEndedUser: tool({
       description: 'Ask the user to answer a question',
@@ -47,9 +45,13 @@ export const userInputAgent = agent({
         question: z.string(),
       }),
       execute: async ({ question }) => {
-        return await text({
+        const answer = await text({
           message: question,
         })
+        if (typeof answer !== 'string') {
+          throw new Error('User cancelled the operation')
+        }
+        return answer
       },
     }),
     askUserFromList: tool({
@@ -64,10 +66,14 @@ export const userInputAgent = agent({
         ),
       }),
       execute: async ({ question, options }) => {
-        return await select({
+        const answer = await select({
           message: question,
           options,
         })
+        if (typeof answer !== 'string') {
+          throw new Error('User cancelled the operation')
+        }
+        return answer
       },
     }),
     confirmWithUser: tool({
@@ -76,9 +82,13 @@ export const userInputAgent = agent({
         question: z.string(),
       }),
       execute: async ({ question }) => {
-        return await confirm({
+        const answer = await confirm({
           message: question,
         })
+        if (typeof answer !== 'boolean') {
+          throw new Error('User cancelled the operation')
+        }
+        return answer
       },
     }),
   },
@@ -90,7 +100,7 @@ export const reactNativeAgent = agent({
     You do not know what platforms are available.
     You must run a tool to list available platforms.
   `,
-  model: openai('gpt-4o-mini'),
+  model: openai('gpt-4o'),
   tools: {
     getReactNativeConfig,
     startMetroDevServer,
@@ -101,7 +111,7 @@ export const appleAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to iOS.
   `,
-  model: openai('gpt-4o-mini'),
+  model: openai('gpt-4o'),
   tools: appleTools,
 })
 
@@ -109,6 +119,6 @@ export const androidAgent = agent({
   system: `
     You are a helpful assistant that helps with everything related to Android.
   `,
-  model: openai('gpt-4o-mini'),
+  model: openai('gpt-4o'),
   tools: androidTools,
 })

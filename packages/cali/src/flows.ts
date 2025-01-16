@@ -63,13 +63,11 @@ export const mainFlow = {
       name: 'askUserToChooseFlow',
       agent: 'userInputAgent',
       input: `
-        Ask user to choose from available flows.
+        Greet the user and ask them what they want to do today.
         
-        Here is the list of flows, together with their descriptions:
-        - "runApplicationFlow": Run the application on the selected platform.
-        
-        You must present options to the user with description of the flow as label, name of the flow as value.
-        You must return the name of the flow as a string. 
+        You can choose from the following options:
+        - Run the application on the selected platform
+        - Exit
       `,
     },
     {
@@ -78,7 +76,7 @@ export const mainFlow = {
       input: [
         {
           ...runApplicationFlow,
-          when: 'User selected to execute "runApplicationFlow"',
+          when: 'User selected to run the application on the selected platform',
         },
       ],
     },

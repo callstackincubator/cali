@@ -15,7 +15,7 @@ export const startMetroDevServer = tool({
     Returns port Metro server started on.
   `,
   parameters: z.object({
-    port: z.number().default(8081),
+    port: z.number().nullable(),
     reactNativeConfig_root: z.string(),
     reactNativeConfig_reactNativePath: z.string(),
   }),
@@ -24,7 +24,7 @@ export const startMetroDevServer = tool({
     reactNativeConfig_root: root,
     reactNativeConfig_reactNativePath: reactNativePath,
   }) => {
-    const { port: newPort } = await findDevServerPort(port, root)
+    const { port: newPort } = await findDevServerPort(port ?? 8081, root)
     startServerInNewWindow(newPort, root, reactNativePath, getDefaultUserTerminal())
     return {
       success: `Metro server started on port ${newPort}.`,
