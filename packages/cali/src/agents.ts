@@ -13,17 +13,21 @@ import {
   getReactNativeConfig,
   launchAndroidAppOnDevice,
   runAdbReverse,
-  startAppleLogging,
   startMetroDevServer,
 } from 'cali-tools'
 import { agent } from 'workflows-ai'
 import { z } from 'zod'
 
+/**
+ * Helper tool to throw errors when something wents wrong on the tool level.
+ */
 export const somethingWentWrong = tool({
   description:
     'Call this tool when something went wrong and you cannot return what you were asked for',
   parameters: z.object({
-    error: z.string(),
+    error: z
+      .string()
+      .describe('Error message with details and potential recovery steps to display to the user'),
   }),
   execute: async ({ error }): Promise<string> => {
     throw new Error(error)
@@ -111,7 +115,6 @@ export const appleAgent = agent({
     bootAppleSimulator,
     buildAppleAppWithoutStarting,
     buildStartAppleApp,
-    startAppleLogging,
   },
 })
 

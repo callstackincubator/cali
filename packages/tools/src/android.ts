@@ -67,16 +67,9 @@ export const bootAndroidEmulator = tool({
     androidDevice_name: z.string(),
   }),
   execute: async ({ adbPath, androidDevice_name: emulatorName }) => {
-    try {
-      await tryLaunchEmulator(adbPath, emulatorName)
-      return {
-        success: 'Device booted successfully.',
-        action: `Re-run "getAndroidDevices" to verify ${emulatorName} is in the list, with "booted" set to true.`,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to boot emulator',
-      }
+    await tryLaunchEmulator(adbPath, emulatorName)
+    return {
+      success: 'Device booted successfully.',
     }
   },
 })
@@ -105,15 +98,9 @@ export const buildAndroidApp = tool({
 
     // tbd: additional CLI flags, such as activeArchOnly
 
-    try {
-      build(gradleArgs, sourceDir)
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: JSON.stringify(error),
-      }
+    build(gradleArgs, sourceDir)
+    return {
+      success: true,
     }
   },
 })
@@ -125,18 +112,9 @@ export const runAdbReverse = tool({
     port: z.number(),
   }),
   execute: async ({ androidDevice_id: deviceId, port }) => {
-    try {
-      tryRunAdbReverse(port, deviceId)
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to run "adb reverse". Port is not forwared.',
-      }
+    tryRunAdbReverse(port, deviceId)
+    return {
+      success: true,
     }
   },
 })
@@ -160,24 +138,16 @@ export const launchAndroidAppOnDevice = tool({
     didForwardMetroPortToDevice,
   }) => {
     if (!didForwardMetroPortToDevice) {
-      return {
-        error: 'Port is not forwarded to device.',
-        action: 'Run "runAdbReverse" to forward port to device and try again.',
-      }
+      throw new Error('Port is not forwarded to device.')
     }
-    try {
-      // @ts-ignore
-      tryLaunchAppOnDevice(deviceId, { packageName, mainActivity, applicationId }, adbPath, {
-        appId: '',
-        appIdSuffix: '',
-      })
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to launch app',
-      }
+
+    // @ts-ignore
+    tryLaunchAppOnDevice(deviceId, { packageName, mainActivity, applicationId }, adbPath, {
+      appId: '',
+      appIdSuffix: '',
+    })
+    return {
+      success: true,
     }
   },
 })

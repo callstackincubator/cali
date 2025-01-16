@@ -42,16 +42,9 @@ export const bootAppleSimulator = tool({
     deviceId: z.string(),
   }),
   execute: async ({ deviceId }) => {
-    try {
-      execSync(`xcrun simctl boot ${deviceId}`, { stdio: 'inherit' })
-      return {
-        success: `Device ${deviceId} booted successfully.`,
-      }
-    } catch (error) {
-      return {
-        error:
-          error instanceof Error ? error.message : `Failed to boot simulator with ID ${deviceId}`,
-      }
+    execSync(`xcrun simctl boot ${deviceId}`, { stdio: 'inherit' })
+    return {
+      success: `Device ${deviceId} booted successfully.`,
     }
   },
 })
@@ -76,15 +69,10 @@ export const buildAppleAppWithoutStarting = tool({
   execute: async ({ platform, ...params }) => {
     const config = await loadReactNativeConfig()
     const build = createAppleBuild({ platformName: platform })
-    try {
-      await build([], config, params)
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to build application',
-      }
+
+    await build([], config, params)
+    return {
+      success: true,
     }
   },
 })
@@ -106,16 +94,10 @@ export const buildStartAppleApp = tool({
   execute: async ({ platform, ...params }) => {
     const run = createAppleRun({ platformName: platform })
 
-    try {
-      const config = await loadReactNativeConfig()
-      await run([], config, params)
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to start application',
-      }
+    const config = await loadReactNativeConfig()
+    await run([], config, params)
+    return {
+      success: true,
     }
   },
 })
@@ -128,43 +110,37 @@ export const installPods = tool({
     newArchitecture: z.boolean().optional(),
   }),
   execute: async ({ newArchitecture, platform, clean }) => {
-    try {
-      const config = await loadReactNativeConfig()
-      const directory = config.project?.[platform]?.sourceDir ?? 'ios'
+    const config = await loadReactNativeConfig()
+    const directory = config.project?.[platform]?.sourceDir ?? 'ios'
 
-      if (!directory) {
-        return {
-          error: 'Project directory not found',
-        }
-      }
-
-      if (clean) {
-        execSync('rm -rf Pods Podfile.lock build', {
-          cwd: directory,
-          stdio: 'inherit',
-        })
-      }
-
-      const commands = ['bundle exec pod install']
-
-      for (const command of commands) {
-        execSync(command, {
-          cwd: directory,
-          stdio: 'inherit',
-          env: {
-            ...process.env,
-            ...(newArchitecture ? { RCT_NEW_ARCH_ENABLED: '1' } : {}),
-          },
-        })
-      }
-
+    if (!directory) {
       return {
-        success: true,
+        error: 'Project directory not found',
       }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to install pods',
-      }
+    }
+
+    if (clean) {
+      execSync('rm -rf Pods Podfile.lock build', {
+        cwd: directory,
+        stdio: 'inherit',
+      })
+    }
+
+    const commands = ['bundle exec pod install']
+
+    for (const command of commands) {
+      execSync(command, {
+        cwd: directory,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          ...(newArchitecture ? { RCT_NEW_ARCH_ENABLED: '1' } : {}),
+        },
+      })
+    }
+
+    return {
+      success: true,
     }
   },
 })
@@ -176,17 +152,11 @@ export const startAppleLogging = tool({
     interactive: z.boolean().optional().default(true),
   }),
   execute: async ({ platform, ...params }) => {
-    try {
-      const config = await loadReactNativeConfig()
-      const log = createLogCommand({ platformName: platform })
-      await log([], config, params)
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to start logging',
-      }
+    const config = await loadReactNativeConfig()
+    const log = createLogCommand({ platformName: platform })
+    await log([], config, params)
+    return {
+      success: true,
     }
   },
 })

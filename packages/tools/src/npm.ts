@@ -39,19 +39,13 @@ export const unInstallNpmPackage = tool({
     packageManager: z.enum(['yarn', 'npm', 'bun']).optional(),
   }),
   execute: async ({ packageNames, packageManager }) => {
-    try {
-      const params = {
-        packageManager: packageManager || 'npm',
-        root: process.cwd(),
-      }
-      await uninstall(packageNames, params)
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to install package',
-      }
+    const params = {
+      packageManager: packageManager || 'npm',
+      root: process.cwd(),
+    }
+    await uninstall(packageNames, params)
+    return {
+      success: true,
     }
   },
 })

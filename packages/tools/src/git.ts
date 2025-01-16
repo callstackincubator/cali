@@ -11,23 +11,17 @@ export const applyDiff = tool({
     diff: z.string(),
   }),
   execute: async ({ filePath, diff }) => {
-    try {
-      const originalContent = fs.readFileSync(filePath, 'utf8')
-      const patchedContent = applyPatch(originalContent, diff)
+    const originalContent = fs.readFileSync(filePath, 'utf8')
+    const patchedContent = applyPatch(originalContent, diff)
 
-      if (patchedContent === false) {
-        throw new Error('Failed to apply patch - patch may be invalid or not applicable')
-      }
+    if (patchedContent === false) {
+      throw new Error('Failed to apply patch - patch may be invalid or not applicable')
+    }
 
-      fs.writeFileSync(filePath, patchedContent, 'utf8')
+    fs.writeFileSync(filePath, patchedContent, 'utf8')
 
-      return {
-        success: true,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to apply diff',
-      }
+    return {
+      success: true,
     }
   },
 })

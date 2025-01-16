@@ -24,16 +24,10 @@ export const startMetroDevServer = tool({
     reactNativeConfig_root: root,
     reactNativeConfig_reactNativePath: reactNativePath,
   }) => {
-    try {
-      const { port: newPort } = await findDevServerPort(port, root)
-      startServerInNewWindow(newPort, root, reactNativePath, getDefaultUserTerminal())
-      return {
-        success: `Metro server started on port ${newPort}.`,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to start Metro bundler',
-      }
+    const { port: newPort } = await findDevServerPort(port, root)
+    startServerInNewWindow(newPort, root, reactNativePath, getDefaultUserTerminal())
+    return {
+      success: `Metro server started on port ${newPort}.`,
     }
   },
 })
@@ -67,25 +61,19 @@ export const getReactNativeConfig = tool({
   `,
   parameters: z.object({}),
   execute: async () => {
-    try {
-      const {
-        root,
-        reactNativePath: path,
-        reactNativeVersion: version,
-        project,
-        platforms,
-      } = await loadReactNativeConfig()
-      return {
-        root,
-        path,
-        version,
-        project,
-        platforms,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to get React Native config',
-      }
+    const {
+      root,
+      reactNativePath: path,
+      reactNativeVersion: version,
+      project,
+      platforms,
+    } = await loadReactNativeConfig()
+    return {
+      root,
+      path,
+      version,
+      project,
+      platforms,
     }
   },
 })
@@ -106,36 +94,30 @@ export const listReactNativeLibraries = tool({
     search: z.string().optional(),
   }),
   execute: async ({ search }) => {
-    try {
-      const response = await fetch(
-        `https://reactnative.directory/api/libraries${search ? `?search=${search}` : ''}`
-      )
-      const { libraries } = await response.json()
+    const response = await fetch(
+      `https://reactnative.directory/api/libraries${search ? `?search=${search}` : ''}`
+    )
+    const { libraries } = await response.json()
 
-      const mappedLibraries = libraries.map((library: any) => ({
-        name: `${library.github.name} (★ ${library.github.stats.stars})`,
-        description: library.description,
-        npmPackageName: library.npmPkg,
-        score: library.score,
-        url: library.github.urls.repo,
-      }))
+    const mappedLibraries = libraries.map((library: any) => ({
+      name: `${library.github.name} (★ ${library.github.stats.stars})`,
+      description: library.description,
+      npmPackageName: library.npmPkg,
+      score: library.score,
+      url: library.github.urls.repo,
+    }))
 
-      return {
-        success: true,
-        action: dedent`
-          Ask user to pick a library from the list.
-          Offer user an option to try different search query.
-          Offer user an option to cancel the operation and proceed with something else.
+    return {
+      success: true,
+      action: dedent`
+        Ask user to pick a library from the list.
+        Offer user an option to try different search query.
+        Offer user an option to cancel the operation and proceed with something else.
 
-          For each library, you can use "installNpmPackage" tool to install it.
-          You can also offer to display package description or visit Github repository.
-        `,
-        libraries: mappedLibraries,
-      }
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : 'Failed to start Metro bundler',
-      }
+        For each library, you can use "installNpmPackage" tool to install it.
+        You can also offer to display package description or visit Github repository.
+      `,
+      libraries: mappedLibraries,
     }
   },
 })
