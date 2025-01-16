@@ -2,7 +2,7 @@
 
 import 'dotenv/config'
 
-import { spinner } from '@clack/prompts'
+import { log, spinner } from '@clack/prompts'
 import chalk from 'chalk'
 import dedent from 'dedent'
 import { retro } from 'gradient-string'
@@ -40,19 +40,31 @@ console.log(
 console.log()
 
 const s = spinner()
+s.start()
 
-const response = await execute(mainFlow, {
-  agents: {
-    appleAgent,
-    androidAgent,
-    reactNativeAgent,
-    userInputAgent,
-  },
-  onFlowStart(flow) {
-    s.message(chalk.gray(`Executing: ${flow.name}`))
-  },
-})
-
-s.stop()
-
-console.log(response)
+try {
+  const response = await execute(mainFlow, {
+    agents: {
+      appleAgent,
+      androidAgent,
+      reactNativeAgent,
+      userInputAgent,
+    },
+    onFlowStart(flow) {
+      if (flow.name) {
+        if (
+          ['startMetroServer', 'askUserToChooseFlow', 'askUserToChoosePlatform'].includes(flow.name)
+        ) {
+          s.stop()
+        } else {
+          s.start(chalk.gray(flow.name))
+        }
+      }
+    },
+  })
+  log.success(response)
+} catch (error) {
+  log.error(String(error))
+} finally {
+  s.stop()
+}

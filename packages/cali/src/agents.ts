@@ -19,6 +19,17 @@ import {
 import { agent } from 'workflows-ai'
 import { z } from 'zod'
 
+export const somethingWentWrong = tool({
+  description:
+    'Call this tool when something went wrong and you cannot return what you were asked for',
+  parameters: z.object({
+    error: z.string(),
+  }),
+  execute: async ({ error }): Promise<string> => {
+    throw new Error(error)
+  },
+})
+
 /**
  * Agent that ask the user for input.
  */
@@ -48,15 +59,17 @@ export const userInputAgent = agent({
       description: 'Ask the user to choose one of the provided options',
       parameters: z.object({
         question: z.string(),
-        options: z.array(z.string()),
+        options: z.array(
+          z.object({
+            value: z.string().describe('The value of the option'),
+            label: z.string().describe('The label that explains the value'),
+          })
+        ),
       }),
       execute: async ({ question, options }) => {
         return await select({
           message: question,
-          options: options.map((option) => ({
-            value: option,
-            label: option,
-          })),
+          options,
         })
       },
     }),
@@ -84,6 +97,7 @@ export const reactNativeAgent = agent({
   tools: {
     startMetroDevServer,
     getReactNativeConfig,
+    somethingWentWrong,
   },
 })
 

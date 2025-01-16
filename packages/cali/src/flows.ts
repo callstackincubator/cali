@@ -5,6 +5,7 @@ export const runApplicationFlow = {
   agent: 'sequenceAgent',
   input: [
     {
+      name: 'checkReactNativeEnvironment',
       agent: 'reactNativeAgent',
       input: `
         Check if we are in the React Native environment and whether everything is set up correctly.
@@ -15,6 +16,7 @@ export const runApplicationFlow = {
       agent: 'parallelAgent',
       input: [
         {
+          name: 'startMetroServer',
           agent: 'reactNativeAgent',
           input: 'Start Metro development server if it is not running',
         },
@@ -22,6 +24,7 @@ export const runApplicationFlow = {
           agent: 'sequenceAgent',
           input: [
             {
+              name: 'askUserToChoosePlatform',
               agent: 'userInputAgent',
               input:
                 'Ask user to select one of available platforms, based on provided React Native config in the context',
@@ -30,13 +33,15 @@ export const runApplicationFlow = {
               agent: 'oneOfAgent',
               input: [
                 {
+                  name: 'runApplicationOnIOS',
                   agent: 'appleAgent',
-                  condition: 'User selected to run application on iOS platform',
+                  when: 'User selected to run application on iOS platform',
                   input: 'Run the application on the iOS platform.',
                 },
                 {
+                  name: 'runApplicationOnAndroid',
                   agent: 'androidAgent',
-                  condition: 'User selected to run application on Android platform',
+                  when: 'User selected to run application on Android platform',
                   input: 'Run the application on the Android platform.',
                 },
               ],
@@ -55,6 +60,7 @@ export const mainFlow = {
   agent: 'sequenceAgent',
   input: [
     {
+      name: 'askUserToChooseFlow',
       agent: 'userInputAgent',
       input: `
         Ask user to choose from available flows.
@@ -62,16 +68,17 @@ export const mainFlow = {
         Here is the list of flows, together with their descriptions:
         - "runApplicationFlow": Run the application on the selected platform.
         
+        You must present options to the user with description of the flow as label, name of the flow as value.
         You must return the name of the flow as a string. 
-        Each option should be description of the flow, and the value should be the name of the flow.
       `,
     },
     {
+      name: 'executeFlow',
       agent: 'oneOfAgent',
       input: [
         {
           ...runApplicationFlow,
-          condition: 'User selected to execute "runApplicationFlow"',
+          when: 'User selected to execute "runApplicationFlow"',
         },
       ],
     },
