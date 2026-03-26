@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 export const applyDiff = tool({
   description: 'Apply a diff/patch to a file',
-  parameters: z.object({
+  inputSchema: z.object({
     filePath: z.string(),
     diff: z.string(),
   }),

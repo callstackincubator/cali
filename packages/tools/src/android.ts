@@ -17,7 +17,7 @@ import {
 
 export const getAdbPath = tool({
   description: 'Returns path to ADB executable',
-  parameters: z.object({}),
+  inputSchema: z.object({}),
   execute: async () => {
     return getAdbPathString()
   },
@@ -33,7 +33,7 @@ export const getAndroidDevices = tool({
       - "type" - device type ("device" or "emulator")
       - "booted" - whether the device is booted
   `,
-  parameters: z.object({
+  inputSchema: z.object({
     adbPath: z.string(),
   }),
   execute: async ({ adbPath }) => {
@@ -62,7 +62,7 @@ export const getAndroidDevices = tool({
 
 export const bootAndroidEmulator = tool({
   description: 'Boots a given Android emulator and returns its ID',
-  parameters: z.object({
+  inputSchema: z.object({
     adbPath: z.string(),
     androidDevice_name: z.string(),
   }),
@@ -83,7 +83,7 @@ export const bootAndroidEmulator = tool({
 
 export const buildAndroidApp = tool({
   description: 'Builds Android application and install it on a given device',
-  parameters: z.object({
+  inputSchema: z.object({
     androidDevice_id: z.string(),
     metroPort: z.number(),
     reactNativeConfig_android_sourceDir: z.string(),
@@ -120,7 +120,7 @@ export const buildAndroidApp = tool({
 
 export const runAdbReverse = tool({
   description: 'Runs "adb reverse" to forward given port to a specified Android device',
-  parameters: z.object({
+  inputSchema: z.object({
     androidDevice_id: z.string(),
     port: z.number(),
   }),
@@ -143,7 +143,7 @@ export const runAdbReverse = tool({
 
 export const launchAndroidAppOnDevice = tool({
   description: 'Launches a given Android application on a specified device',
-  parameters: z.object({
+  inputSchema: z.object({
     androidDevice_id: z.string(),
     adbPath: z.string(),
     reactNativeConfig_android_packageName: z.string(),

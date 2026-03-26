@@ -1,185 +1,163 @@
 #!/usr/bin/env node
 
-import 'dotenv/config'
+import { runQaCommand } from './commands/qa.js'
+import type { QaCliOptions } from './env/types.js'
+import { normalizePlatform } from './utils.js'
 
-import { createOpenAI } from '@ai-sdk/openai'
-import { log, outro, select, spinner, text } from '@clack/prompts'
-import { CoreMessage, generateText } from 'ai'
-import * as tools from 'cali-tools'
-import chalk from 'chalk'
-import dedent from 'dedent'
-import { retro } from 'gradient-string'
-import { z } from 'zod'
+function printHelp() {
+  console.log(`cali v2
 
-import { systemPrompt } from './prompt.js'
-import { getApiKey } from './utils.js'
+Usage:
+  cali qa [options]
 
-const MessageSchema = z.union([
-  z.object({ type: z.literal('select'), content: z.string(), options: z.array(z.string()) }),
-  z.object({ type: z.literal('question'), content: z.string() }),
-  z.object({ type: z.literal('end'), content: z.string() }),
-])
-
-console.clear()
-
-process.on('uncaughtException', (error) => {
-  console.error(chalk.red(error.message))
-  console.log(chalk.gray(error.stack))
-})
-
-console.log(
-  retro(`
-  ██████╗ █████╗ ██╗     ██╗
- ██╔════╝██╔══██╗██║     ██║
- ██║     ███████║██║     ██║
- ██║     ██╔══██║██║     ██║
- ╚██████╗██║  ██║███████╗██║
-  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝
+Options:
+  --preset <name>       Built-in preset: eas-mobile-pr, local-android, local-ios
+  --config <path>       Path to cali.config.ts
+  --prompt <text>       Add task-specific QA intent
+  --json <path>         Load normalized environment context from JSON
+  --platform <name>     android or ios
+  --artifact <path>     App artifact path (.apk, .aab, .app, .ipa)
+  --app-id <id>         Application identifier / package name
+  --device <name>       Simulator or emulator name to provision
+  --output-dir <path>   Output directory for artifacts
+  --build-id <id>       Build identifier
+  --workflow-url <url>  Workflow or build link
+  --pr-number <n>       Pull request number
+  --pr-title <text>     Pull request title
+  --pr-body <text>      Pull request body
+  --task-id <id>        Task identifier
+  --task-title <text>   Task title
+  --task-body <text>    Task body
+  --model <id>          Override the QA model
+  --help                Show this help
 `)
-)
+}
 
-console.log(
-  chalk.gray(dedent`
-    AI agent for building React Native apps.
-    
-    Powered by: ${chalk.bold('Vercel AI SDK')} & ${chalk.bold('React Native CLI')}
-  `)
-)
+function readFlagValue(argv: string[], index: number) {
+  const value = argv[index + 1]
+  if (!value || value.startsWith('--')) {
+    throw new Error(`Missing value for ${argv[index]}`)
+  }
 
-console.log()
+  return value
+}
 
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4o'
+function parseQaArgs(argv: string[]): QaCliOptions {
+  const options: QaCliOptions = {}
 
-const openai = createOpenAI({
-  apiKey: await getApiKey('OpenAI', 'OPENAI_API_KEY'),
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index]
+
+    switch (argument) {
+      case '--preset':
+        options.presetName = readFlagValue(argv, index) as QaCliOptions['presetName']
+        index += 1
+        break
+      case '--config':
+        options.configPath = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--prompt':
+        options.prompt = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--json':
+        options.jsonPath = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--platform': {
+        const platform = normalizePlatform(readFlagValue(argv, index))
+        if (!platform) {
+          throw new Error('`--platform` must be `android` or `ios`.')
+        }
+        options.platform = platform
+        index += 1
+        break
+      }
+      case '--artifact':
+        options.artifactPath = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--app-id':
+        options.appId = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--device':
+        options.deviceName = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--output-dir':
+        options.outputDir = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--build-id':
+        options.buildId = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--workflow-url':
+        options.workflowUrl = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--pr-number':
+        options.prNumber = Number(readFlagValue(argv, index))
+        index += 1
+        break
+      case '--pr-title':
+        options.prTitle = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--pr-body':
+        options.prBody = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--task-id':
+        options.taskId = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--task-title':
+        options.taskTitle = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--task-body':
+        options.taskBody = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--model':
+        options.model = readFlagValue(argv, index)
+        index += 1
+        break
+      case '--help':
+      case '-h':
+        printHelp()
+        process.exit(0)
+      default:
+        throw new Error(`Unknown argument: ${argument}`)
+    }
+  }
+
+  return options
+}
+
+async function main() {
+  const [command, ...rest] = process.argv.slice(2)
+
+  if (!command || command === '--help' || command === '-h') {
+    printHelp()
+    return
+  }
+
+  if (command !== 'qa') {
+    throw new Error(`Unsupported command: ${command}`)
+  }
+
+  await runQaCommand(parseQaArgs(rest))
+}
+
+main().catch((error) => {
+  const message = error instanceof Error ? error : new Error(String(error))
+  console.error(message.message)
+  if (message.stack) {
+    console.error(message.stack)
+  }
+  process.exitCode = 1
 })
-
-async function startSession(): Promise<CoreMessage[]> {
-  const question = await text({
-    message: 'What do you want to do today?',
-    placeholder: 'e.g. "Build the app" or "See available simulators"',
-    validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
-  })
-
-  if (typeof question === 'symbol') {
-    outro(chalk.gray('Bye!'))
-    process.exit(0)
-  }
-
-  return [
-    {
-      role: 'system',
-      content: 'What do you want to do today?',
-    },
-    {
-      role: 'user',
-      content: question,
-    },
-  ]
-}
-
-let messages = await startSession()
-
-const s = spinner()
-
-// eslint-disable-next-line no-constant-condition
-while (true) {
-  s.start(chalk.gray('Thinking...'))
-
-  const response = await generateText({
-    model: openai(AI_MODEL),
-    system: systemPrompt,
-    tools,
-    maxSteps: 10,
-    messages,
-    onStepStart(toolCalls) {
-      if (toolCalls.length > 0) {
-        const message = `Executing: ${chalk.gray(toolCalls.map((toolCall) => toolCall.toolName).join(', '))}`
-
-        let spinner = s.message
-        for (const toolCall of toolCalls) {
-          /**
-           * Certain tools call external helpers outside of our control that pipe output to our stdout.
-           * In such case, we stop the spinner to avoid glitches and display the output instead.
-           */
-          if (
-            [
-              'buildAndroidApp',
-              'launchAndroidAppOnDevice',
-              'installNpmPackage',
-              'uninstallNpmPackage',
-            ].includes(toolCall.toolName)
-          ) {
-            spinner = s.stop
-            break
-          }
-        }
-
-        spinner(message)
-      }
-    },
-  })
-
-  const toolCalls = response.steps.flatMap((step) =>
-    step.toolCalls.map((toolCall) => toolCall.toolName)
-  )
-
-  if (toolCalls.length > 0) {
-    s.stop(`Tools called: ${chalk.gray(toolCalls.join(', '))}`)
-  } else {
-    s.stop(chalk.gray('Done.'))
-  }
-
-  for (const step of response.steps) {
-    if (step.text.length > 0) {
-      messages.push({ role: 'assistant', content: step.text })
-    }
-    if (step.toolCalls.length > 0) {
-      messages.push({ role: 'assistant', content: step.toolCalls })
-    }
-    if (step.toolResults.length > 0) {
-      // tbd: fix this upstream. for some reason, the tool does not include the type,
-      // against the spec.
-      for (const toolResult of step.toolResults) {
-        if (!toolResult.type) {
-          toolResult.type = 'tool-result'
-        }
-      }
-      messages.push({ role: 'tool', content: step.toolResults })
-    }
-  }
-
-  // tbd: handle parsing errors
-  const data = MessageSchema.parse(JSON.parse(response.text))
-
-  const answer = await (() => {
-    switch (data.type) {
-      case 'select':
-        return select({
-          message: data.content,
-          options: data.options.map((option) => ({ value: option, label: option })),
-        })
-      case 'question':
-        return text({
-          message: data.content,
-          validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
-        })
-      case 'end':
-        log.info(data.content)
-        return text({
-          message: 'What do you want to do next?',
-          validate: (value) => (value.length > 0 ? undefined : 'Please provide a valid answer.'),
-        })
-    }
-  })()
-
-  if (typeof answer !== 'string') {
-    messages = await startSession()
-    continue
-  }
-
-  messages.push({
-    role: 'user',
-    content: answer as string,
-  })
-}

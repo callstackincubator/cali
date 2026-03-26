@@ -14,7 +14,7 @@ export const startMetroDevServer = tool({
     Starts Metro development server on a given port or a different available port.
     Returns port Metro server started on.
   `,
-  parameters: z.object({
+  inputSchema: z.object({
     port: z.number().default(8081),
     reactNativeConfig_root: z.string(),
     reactNativeConfig_reactNativePath: z.string(),
@@ -65,7 +65,7 @@ export const getReactNativeConfig = tool({
       - "mainActivity" - Android main activity
       - "assets" - Android assets
   `,
-  parameters: z.object({}),
+  inputSchema: z.object({}),
   execute: async () => {
     try {
       const {
@@ -102,7 +102,7 @@ export const listReactNativeLibraries = tool({
       - "score" - library score
       - "url" - library GitHub repository URL
   `,
-  parameters: z.object({
+  inputSchema: z.object({
     search: z.string().optional(),
   }),
   execute: async ({ search }) => {

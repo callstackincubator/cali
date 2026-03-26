@@ -20,9 +20,6 @@
     "vitest": "^2.1.1"
   },
   "license": "MIT",
-  "patchedDependencies": {
-    "ai@4.0.3": "patches/ai@4.0.3.patch"
-  },
   "private": true,
   "scripts": {
     "build": "bun run build:tools && bun run build:mcp-server && bun run build:cli",

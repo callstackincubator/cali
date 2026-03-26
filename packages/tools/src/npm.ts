@@ -5,7 +5,7 @@ import { install, installDev, uninstall } from './vendor/react-native-cli.js'
 
 export const installNpmPackage = tool({
   description: 'Install a package from npm by name',
-  parameters: z.object({
+  inputSchema: z.object({
     packageNames: z.array(z.string()),
     packageManager: z.enum(['yarn', 'npm', 'bun']).optional(),
     dev: z.boolean().optional(),
@@ -34,7 +34,7 @@ export const installNpmPackage = tool({
 
 export const unInstallNpmPackage = tool({
   description: 'Uninstall a package from npm by name',
-  parameters: z.object({
+  inputSchema: z.object({
     packageNames: z.array(z.string()),
     packageManager: z.enum(['yarn', 'npm', 'bun']).optional(),
   }),

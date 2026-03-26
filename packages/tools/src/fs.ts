@@ -21,10 +21,19 @@ const fileEncodingSchema = z
   ])
   .default('utf-8')
 
+const readFileInputSchema = z.object({
+  path: z.string(),
+  is_image: z.boolean(),
+  encoding: fileEncodingSchema,
+})
+
+type ReadFileInput = z.infer<typeof readFileInputSchema>
+type ReadFileResult = string | { data: string; mimeType: string }
+
 export const listFiles = tool({
   description:
     'List all files in a directory. If path is nested, you must call it separately for each segment',
-  parameters: z.object({ path: z.string() }),
+  inputSchema: z.object({ path: z.string() }),
   execute: async ({ path }) => {
     return readdir(path)
   },
@@ -32,7 +41,7 @@ export const listFiles = tool({
 
 export const currentDirectory = tool({
   description: 'Get the current working directory',
-  parameters: z.object({}),
+  inputSchema: z.object({}),
   execute: async () => {
     return process.cwd()
   },
@@ -40,7 +49,7 @@ export const currentDirectory = tool({
 
 export const makeDirectory = tool({
   description: 'Create a new directory',
-  parameters: z.object({ path: z.string() }),
+  inputSchema: z.object({ path: z.string() }),
   execute: async ({ path }) => {
     return mkdir(path)
   },
@@ -48,8 +57,8 @@ export const makeDirectory = tool({
 
 export const readFile = tool({
   description: 'Reads a file at a given path',
-  parameters: z.object({ path: z.string(), is_image: z.boolean(), encoding: fileEncodingSchema }),
-  execute: async ({ path, is_image, encoding }) => {
+  inputSchema: readFileInputSchema,
+  execute: async ({ path, is_image, encoding }: ReadFileInput): Promise<ReadFileResult> => {
     const file = await readFileNode(path, { encoding })
     if (is_image) {
       return {
@@ -60,16 +69,19 @@ export const readFile = tool({
       return file
     }
   },
-  experimental_toToolResultContent(result) {
-    return typeof result === 'string'
-      ? [{ type: 'text', text: result }]
-      : [{ type: 'image', data: result.data, mimeType: result.mimeType }]
+  toModelOutput({ output }: { output: ReadFileResult }) {
+    return typeof output === 'string'
+      ? { type: 'text', value: output }
+      : {
+          type: 'content',
+          value: [{ type: 'file-data', data: output.data, mediaType: output.mimeType }],
+        }
   },
 })
 
 export const saveFile = tool({
   description: 'Save a file at a given path',
-  parameters: z.object({
+  inputSchema: z.object({
     path: z.string(),
     content: z.string(),
     encoding: fileEncodingSchema,

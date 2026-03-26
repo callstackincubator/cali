@@ -1,17 +1,60 @@
 # cali
 
-Cali is an AI agent that helps you build React Native apps. It takes all the utilities and functions of a React Native CLI and exposes them as tools to an LLM.
+Cali v2 is a QA-oriented CLI for mobile app review runs. The first shipped role is `cali qa`, which splits deterministic bootstrap from the agent phase and standardizes the resulting QA report.
 
-## Learn more
+## Current scope
 
-Learn more about Cali on [GitHub](https://github.com/callstackincubator/cali).
+- `cali qa`
+- presets: `eas-mobile-pr`, `local-android`, `local-ios`
+- environment adapters: EAS env, local flags, JSON context
+- tool packs: `skills`, `agent-device`
+- publishers: `blob`, `file`
+- additive `--prompt`
 
-## Special thanks
+## Example
 
-Special thanks to [@jedirandy](https://github.com/jedirandy) for donating the name `cali` on `npm`!
+```bash
+cali qa \
+  --preset local-ios \
+  --artifact ./artifacts/MyApp.app \
+  --app-id com.example.myapp \
+  --device "iPhone 16" \
+  --prompt "verify the onboarding copy on Screen B"
+```
 
-## Made with ❤️ at Callstack
+## Credentials
 
-Cali is an open source project and will always remain free to use. If you think it's cool, please star it 🌟. [Callstack](https://callstack.com) is a group of React and React Native geeks, contact us at [hello@callstack.com](mailto:hello@callstack.com) if you need any help with these or just want to say hi!
+`cali qa` supports two model auth paths:
 
-Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥 
+- AI Gateway: `AI_GATEWAY_API_KEY`
+- AI Gateway alias: `AI_GATEWAY_KEY`
+- Anthropic direct: `ANTHROPIC_API_KEY`
+- Anthropic alias: `CLAUDE_API_KEY`
+
+If only Anthropic credentials are present, Cali defaults to `anthropic/claude-sonnet-4.6`.
+Otherwise it defaults to `openai/gpt-5.4` through AI Gateway.
+
+## Config
+
+Create `cali.config.ts` in the project root:
+
+```ts
+export default {
+  role: 'qa',
+  preset: 'local-android',
+  skillPaths: ['./.cali/skills'],
+  extraInstructions: [
+    'Prioritize auth and onboarding flows.',
+  ],
+}
+```
+
+## Outputs
+
+By default the file publisher writes:
+
+- `artifacts/qa/report.json`
+- `artifacts/qa/section.md`
+- `artifacts/qa/status.txt`
+
+If `BLOB_READ_WRITE_TOKEN` is set, the blob publisher uploads screenshots and enriches the JSON report with blob URLs.

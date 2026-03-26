@@ -1,60 +1,126 @@
-import { execSync } from 'node:child_process'
+import { execFile as execFileCallback } from 'node:child_process'
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
+import { promisify } from 'node:util'
 
-import { confirm, outro, text } from '@clack/prompts'
-import chalk from 'chalk'
-import dedent from 'dedent'
+import type { QaPlatform } from './env/types.js'
 
-/**
- * Get API key from environment variables or prompt user for it.
- */
-export async function getApiKey(name: string, key: string) {
-  if (key in process.env) {
-    return process.env[key]
-  }
-  return (async () => {
-    let apiKey: string | symbol
-    do {
-      apiKey = await text({
-        message: dedent`
-          ${chalk.bold(`Please provide your ${name} API key.`)}
+const execFile = promisify(execFileCallback)
 
-          To skip this message, set ${chalk.bold(key)} env variable, and run again. 
-          
-          You can do it in three ways:
-          - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
-            ${chalk.gray(`\`\`\`
-              ${key}=<your-key>
-              \`\`\`
-            `)}
-          - by passing it inline:
-            ${chalk.gray(`\`\`\`
-              ${key}=<your-key> npx cali
-              \`\`\`
-            `)}
-          - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
-            ${chalk.gray(`\`\`\`
-              export ${key}=<your-key>
-              \`\`\`
-            `)},
-          `,
-        validate: (value) => (value.length > 0 ? undefined : `Please provide a valid ${key}.`),
-      })
-    } while (typeof apiKey === 'undefined')
+export type CommandResult = {
+  ok: boolean
+  exitCode: number
+  stdout: string
+  stderr: string
+}
 
-    if (typeof apiKey === 'symbol') {
-      outro(chalk.gray('Bye!'))
-      process.exit(0)
-    }
+type CommandOptions = {
+  cwd?: string
+  env?: NodeJS.ProcessEnv
+  allowFailure?: boolean
+}
 
-    const save = await confirm({
-      message: `Do you want to save it for future runs in .env.local?`,
+type ExecFileError = Error & {
+  stdout?: string
+  stderr?: string
+  code?: number | string
+}
+
+export async function runCommand(
+  file: string,
+  args: string[],
+  options: CommandOptions = {}
+): Promise<CommandResult> {
+  const { cwd = process.cwd(), env = process.env, allowFailure = false } = options
+
+  try {
+    const result = await execFile(file, args, {
+      cwd,
+      env,
+      maxBuffer: 20 * 1024 * 1024,
     })
 
-    if (save) {
-      execSync(`echo "${key}=${apiKey}" >> .env.local`)
-      execSync(`echo ".env.local" >> .gitignore`)
+    return {
+      ok: true,
+      exitCode: 0,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr ?? '',
+    }
+  } catch (unknownError) {
+    const error = unknownError as ExecFileError
+    const stdout = typeof error.stdout === 'string' ? error.stdout : ''
+    const stderr = typeof error.stderr === 'string' ? error.stderr : error.message
+    const exitCode = typeof error.code === 'number' ? error.code : 1
+
+    if (!allowFailure) {
+      throw new Error(
+        [`Command failed: ${file} ${args.join(' ')}`, stderr || stdout].filter(Boolean).join('\n\n')
+      )
     }
 
-    return apiKey
-  })()
+    return {
+      ok: false,
+      exitCode,
+      stdout,
+      stderr,
+    }
+  }
+}
+
+export async function ensureDirectory(directoryPath: string) {
+  await mkdir(directoryPath, { recursive: true })
+}
+
+export function parseJson<T>(value: string | undefined, fallback: T): T {
+  if (!value) {
+    return fallback
+  }
+
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+export function trimText(value: string, max = 6000) {
+  if (value.length <= max) {
+    return value
+  }
+
+  return `${value.slice(0, max)}\n...<truncated>`
+}
+
+export function uniqueStrings(values: Array<string | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim()))]
+}
+
+export function asArray(value: string | string[] | undefined) {
+  if (!value) {
+    return []
+  }
+
+  return Array.isArray(value) ? value : [value]
+}
+
+export function resolveFromCwd(cwd: string, targetPath: string) {
+  return path.isAbsolute(targetPath) ? targetPath : path.resolve(cwd, targetPath)
+}
+
+export function normalizePlatform(value: string | undefined): QaPlatform | undefined {
+  if (value === 'android' || value === 'ios') {
+    return value
+  }
+
+  return undefined
+}
+
+export function humanizeScreenshotLabel(fileName: string) {
+  const stem = fileName.replace(/\.[^.]+$/, '')
+  const words = stem
+    .split(/[-_]+/g)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+
+  return words.join(' ') || fileName
 }

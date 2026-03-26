@@ -16,7 +16,7 @@ const platforms = ['ios', 'tvos', 'visionos'] as const
 
 export const getAppleSimulators = tool({
   description: 'Gets available simulators',
-  parameters: z.object({
+  inputSchema: z.object({
     platform: z.enum(platforms),
   }),
   execute: async ({ platform }) => {
@@ -27,7 +27,7 @@ export const getAppleSimulators = tool({
 
 export const installRubyGems = tool({
   description: 'Install Ruby gems, including CocoaPods',
-  parameters: z.object({}),
+  inputSchema: z.object({}),
   execute: async () => {
     execSync('bundle install --path vendor/bundle', { stdio: 'inherit' })
     return {
@@ -38,7 +38,7 @@ export const installRubyGems = tool({
 
 export const bootAppleSimulator = tool({
   description: 'Boots iOS simulator',
-  parameters: z.object({
+  inputSchema: z.object({
     deviceId: z.string(),
   }),
   execute: async ({ deviceId }) => {
@@ -58,7 +58,7 @@ export const bootAppleSimulator = tool({
 
 export const buildAppleAppWithoutStarting = tool({
   description: 'Build application for Apple platforms without running it',
-  parameters: z.object({
+  inputSchema: z.object({
     platform: z.enum(platforms),
     configuration: z.enum(['Debug', 'Release']),
     mode: z.string().optional(),
@@ -91,7 +91,7 @@ export const buildAppleAppWithoutStarting = tool({
 
 export const buildStartAppleApp = tool({
   description: 'Build and start Apple application on simulator or device',
-  parameters: z.object({
+  inputSchema: z.object({
     platform: z.enum(platforms),
     simulator: z.string().optional(),
     device: z.union([z.string(), z.literal(true)]).optional(),
@@ -122,7 +122,7 @@ export const buildStartAppleApp = tool({
 
 export const installPods = tool({
   description: 'Install CocoaPods dependencies',
-  parameters: z.object({
+  inputSchema: z.object({
     platform: z.enum(platforms),
     clean: z.boolean().optional().default(false),
     newArchitecture: z.boolean().optional(),
@@ -171,7 +171,7 @@ export const installPods = tool({
 
 export const startAppleLogging = tool({
   description: 'Start Apple gathering logs from simulator or device',
-  parameters: z.object({
+  inputSchema: z.object({
     platform: z.enum(platforms),
     interactive: z.boolean().optional().default(true),
   }),
