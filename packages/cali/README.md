@@ -43,10 +43,27 @@ Create `cali.config.ts` in the project root:
 export default {
   role: 'qa',
   preset: 'local-android',
-  skillPaths: ['./.cali/skills'],
+  skillPaths: ['./.agents/skills', './.cali/skills'],
   extraInstructions: ['Prioritize auth and onboarding flows.'],
 }
 ```
+
+By default, Cali discovers project skills from:
+
+- `./.agents/skills`
+- `./.cali/skills`
+
+## Installing Skills
+
+For starter skills, use `npx skills` with the repos we trust:
+
+```bash
+npx skills add callstackincubator/agent-device --agent codex --skill '*' -y
+npx skills add callstackincubator/agent-skills --agent codex --skill '*' -y
+```
+
+This installs project-local skills into `./.agents/skills` and writes `skills-lock.json`.
+Those skills are picked up automatically by `cali qa`.
 
 ## Outputs
 
