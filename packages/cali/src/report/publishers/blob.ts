@@ -40,8 +40,7 @@ export async function publishBlobReport({ report }: BlobPublishOptions): Promise
           blobPathname: blob.pathname,
         }
       } catch (unknownError) {
-        const error =
-          unknownError instanceof Error ? unknownError : new Error(String(unknownError))
+        const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
 
         return {
           ...screenshot,

@@ -1,4 +1,4 @@
-import { ToolLoopAgent, stepCountIs, tool } from 'ai'
+import { stepCountIs, tool, ToolLoopAgent } from 'ai'
 import { z } from 'zod'
 
 import type { QaRuntimeContext } from '../env/types.js'
@@ -109,7 +109,9 @@ function hasToolActivity(
   })
 }
 
-export async function runQaMobileRole(options: RunQaMobileRoleOptions): Promise<QaMobileRoleResult> {
+export async function runQaMobileRole(
+  options: RunQaMobileRoleOptions
+): Promise<QaMobileRoleResult> {
   const { context, modelId, skillPaths, enabledToolPacks, extraInstructions, prompt } = options
   const skills = await discoverSkills(skillPaths)
   const agentDeviceTrace: AgentDeviceTraceEntry[] = []

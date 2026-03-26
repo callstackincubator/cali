@@ -1,8 +1,8 @@
 import path from 'node:path'
 
+import { normalizePlatform, parseJson, resolveFromCwd } from '../utils.js'
 import type { QaCliOptions, QaRuntimeContext } from './types.js'
 import type { QaResolvedConfig } from './types.js'
-import { normalizePlatform, parseJson, resolveFromCwd } from '../utils.js'
 
 type ParsedPr = {
   number?: number
@@ -19,9 +19,7 @@ export async function fromEasEnv(
 ): Promise<QaRuntimeContext> {
   const parsedPr = parseJson<ParsedPr>(process.env.PR_JSON, {})
   const platform =
-    cli.platform ??
-    normalizePlatform(process.env.QA_PLATFORM) ??
-    config.platformDefaults.platform
+    cli.platform ?? normalizePlatform(process.env.QA_PLATFORM) ?? config.platformDefaults.platform
 
   if (!platform) {
     throw new Error('EAS adapter requires QA_PLATFORM or a preset platform default.')
@@ -62,7 +60,9 @@ export async function fromEasEnv(
       prTitle: cli.prTitle ?? parsedPr.title,
       prBody: cli.prBody ?? parsedPr.body,
       prLabels: Array.isArray(parsedPr.labels)
-        ? parsedPr.labels.map((label) => label.name).filter((value): value is string => Boolean(value))
+        ? parsedPr.labels
+            .map((label) => label.name)
+            .filter((value): value is string => Boolean(value))
         : [],
       isDraft: Boolean(parsedPr.draft),
       taskId: cli.taskId ?? process.env.TASK_ID,

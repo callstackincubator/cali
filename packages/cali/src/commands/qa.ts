@@ -10,12 +10,7 @@ import { publishBlobReport } from '../report/publishers/blob.js'
 import { publishFileReport } from '../report/publishers/file.js'
 import type { QaReport, QaReportInput, ScreenshotInfo } from '../report/types.js'
 import { runQaMobileRole } from '../roles/qa-mobile.js'
-import {
-  ensureDirectory,
-  humanizeScreenshotLabel,
-  resolveFromCwd,
-  runCommand,
-} from '../utils.js'
+import { ensureDirectory, humanizeScreenshotLabel, resolveFromCwd, runCommand } from '../utils.js'
 
 async function resolveEnvironmentContext(
   cwd: string,
@@ -54,21 +49,42 @@ async function resolveEnvironmentContext(
 async function bootstrapApp(context: QaRuntimeContext) {
   if (context.deviceName) {
     if (context.platform === 'ios') {
-      await runCommand('agent-device', ['ensure-simulator', '--platform', 'ios', '--device', context.deviceName, '--boot'])
+      await runCommand('agent-device', [
+        'ensure-simulator',
+        '--platform',
+        'ios',
+        '--device',
+        context.deviceName,
+        '--boot',
+      ])
     } else {
-      await runCommand('agent-device', ['boot', '--platform', 'android', '--device', context.deviceName])
+      await runCommand('agent-device', [
+        'boot',
+        '--platform',
+        'android',
+        '--device',
+        context.deviceName,
+      ])
     }
   }
 
   if (context.platform === 'android') {
-    let installResult = await runCommand('agent-device', ['install', context.appId, context.artifactPath], {
-      allowFailure: true,
-    })
+    let installResult = await runCommand(
+      'agent-device',
+      ['install', context.appId, context.artifactPath],
+      {
+        allowFailure: true,
+      }
+    )
 
     if (!installResult.ok) {
-      installResult = await runCommand('agent-device', ['reinstall', context.appId, context.artifactPath], {
-        allowFailure: true,
-      })
+      installResult = await runCommand(
+        'agent-device',
+        ['reinstall', context.appId, context.artifactPath],
+        {
+          allowFailure: true,
+        }
+      )
     }
 
     if (!installResult.ok) {
@@ -77,12 +93,18 @@ async function bootstrapApp(context: QaRuntimeContext) {
       )
     }
   } else {
-    const reinstallResult = await runCommand('agent-device', ['reinstall', context.appId, context.artifactPath], {
-      allowFailure: true,
-    })
+    const reinstallResult = await runCommand(
+      'agent-device',
+      ['reinstall', context.appId, context.artifactPath],
+      {
+        allowFailure: true,
+      }
+    )
 
     if (!reinstallResult.ok) {
-      throw new Error(`Deterministic iOS bootstrap failed during reinstall.\n\n${reinstallResult.stderr || reinstallResult.stdout}`)
+      throw new Error(
+        `Deterministic iOS bootstrap failed during reinstall.\n\n${reinstallResult.stderr || reinstallResult.stdout}`
+      )
     }
   }
 
@@ -91,7 +113,9 @@ async function bootstrapApp(context: QaRuntimeContext) {
   })
 
   if (!openResult.ok) {
-    throw new Error(`Deterministic app bootstrap failed during open.\n\n${openResult.stderr || openResult.stdout}`)
+    throw new Error(
+      `Deterministic app bootstrap failed during open.\n\n${openResult.stderr || openResult.stdout}`
+    )
   }
 }
 
@@ -147,7 +171,8 @@ function composeReport(
     screenshotLabels: reportInput.screenshotLabels ?? [],
     screenshots: screenshots.map((screenshot) => ({
       ...screenshot,
-      label: screenshotLabelMap.get(screenshot.fileName) ?? humanizeScreenshotLabel(screenshot.fileName),
+      label:
+        screenshotLabelMap.get(screenshot.fileName) ?? humanizeScreenshotLabel(screenshot.fileName),
     })),
     agentDeviceTrace: agentDeviceTrace.slice(-20),
   }
@@ -212,6 +237,8 @@ export async function runQaCommand(cli: QaCliOptions) {
   const report = composeReport(config.model, context, reportInput, screenshots, agentDeviceTrace)
   const publishedReport = await publishReport(report, config.outputPublishers)
 
-  console.log(`QA report written to ${resolveFromCwd(cwd, path.join(context.outputDir, 'section.md'))}`)
+  console.log(
+    `QA report written to ${resolveFromCwd(cwd, path.join(context.outputDir, 'section.md'))}`
+  )
   console.log(`Overall status: ${publishedReport.overallStatus}`)
 }

@@ -1,8 +1,8 @@
 import path from 'node:path'
 
+import { resolveFromCwd } from '../utils.js'
 import type { QaCliOptions, QaRuntimeContext } from './types.js'
 import type { QaResolvedConfig } from './types.js'
-import { resolveFromCwd } from '../utils.js'
 
 export async function fromLocalFlags(
   cwd: string,

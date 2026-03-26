@@ -1,5 +1,5 @@
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { readFile, readdir } from 'node:fs/promises'
 
 import { tool } from 'ai'
 import { z } from 'zod'
@@ -23,7 +23,10 @@ function parseFrontmatter(content: string) {
   }
 
   const frontmatter = match[1]
-  const name = frontmatter.match(/^name:\s*(.+)$/m)?.[1]?.trim().replace(/^['"]|['"]$/g, '')
+  const name = frontmatter
+    .match(/^name:\s*(.+)$/m)?.[1]
+    ?.trim()
+    .replace(/^['"]|['"]$/g, '')
   const description = frontmatter
     .match(/^description:\s*(.+)$/m)?.[1]
     ?.trim()
@@ -155,12 +158,7 @@ export function createSkillsToolPack(skills: SkillMetadata[]) {
     read_skill_file: tool({
       description: 'Read a text file inside a previously loaded skill directory.',
       inputSchema: readSkillFileInputSchema,
-      execute: async ({
-        skillName,
-        path: relativeFilePath,
-        startLine = 1,
-        maxLines = 200,
-      }) => {
+      execute: async ({ skillName, path: relativeFilePath, startLine = 1, maxLines = 200 }) => {
         const skill = findSkill(skills, skillName)
         if (!loadedSkills.has(skill.name.toLowerCase())) {
           throw new Error(`Skill must be loaded before reading files: ${skill.name}`)

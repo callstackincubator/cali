@@ -1,4 +1,9 @@
-import type { EnvironmentAdapterName, PublisherName, QaPresetName, ToolPackName } from '../config/schema.js'
+import type {
+  EnvironmentAdapterName,
+  PublisherName,
+  QaPresetName,
+  ToolPackName,
+} from '../config/schema.js'
 
 export type QaPlatform = 'android' | 'ios'
 

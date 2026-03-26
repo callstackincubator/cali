@@ -16,10 +16,7 @@ export function createAgentDeviceToolPack(options: CreateAgentDeviceToolPackOpti
       .describe(
         'The first agent-device subcommand to run, such as devices, open, snapshot, tap, fill, press, or screenshot.'
       ),
-    args: z
-      .array(z.string())
-      .optional()
-      .describe('Remaining CLI arguments for the subcommand.'),
+    args: z.array(z.string()).optional().describe('Remaining CLI arguments for the subcommand.'),
   })
 
   return {

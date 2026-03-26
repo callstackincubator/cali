@@ -92,7 +92,11 @@ export function trimText(value: string, max = 6000) {
 }
 
 export function uniqueStrings(values: Array<string | undefined>) {
-  return [...new Set(values.filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim()))]
+  return [
+    ...new Set(
+      values.filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim())
+    ),
+  ]
 }
 
 export function asArray(value: string | string[] | undefined) {

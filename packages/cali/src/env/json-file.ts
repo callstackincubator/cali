@@ -3,9 +3,9 @@ import path from 'node:path'
 
 import { z } from 'zod'
 
+import { resolveFromCwd } from '../utils.js'
 import type { QaCliOptions, QaRuntimeContext } from './types.js'
 import type { QaResolvedConfig } from './types.js'
-import { resolveFromCwd } from '../utils.js'
 
 const JsonMetadataSchema = z
   .object({

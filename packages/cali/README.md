@@ -44,9 +44,7 @@ export default {
   role: 'qa',
   preset: 'local-android',
   skillPaths: ['./.cali/skills'],
-  extraInstructions: [
-    'Prioritize auth and onboarding flows.',
-  ],
+  extraInstructions: ['Prioritize auth and onboarding flows.'],
 }
 ```
 
