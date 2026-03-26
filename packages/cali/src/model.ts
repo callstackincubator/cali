@@ -1,5 +1,4 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
-import { createGateway, gateway } from 'ai'
 
 const DEFAULT_QA_MODEL_ID = 'anthropic/claude-sonnet-4.6'
 
@@ -27,16 +26,20 @@ function stripAnthropicPrefix(modelId: string) {
   return modelId.startsWith('anthropic/') ? modelId.slice('anthropic/'.length) : modelId
 }
 
+function ensureGatewayApiKeyAlias() {
+  if (!process.env.AI_GATEWAY_API_KEY && process.env.AI_GATEWAY_KEY) {
+    process.env.AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_KEY
+  }
+}
+
 export function resolveQaModelId(configuredModelId?: string) {
   return configuredModelId ?? process.env.QA_MODEL ?? DEFAULT_QA_MODEL_ID
 }
 
 export function createQaAgentModel(modelId = resolveQaModelId()) {
-  const gatewayApiKey = process.env.AI_GATEWAY_API_KEY ?? process.env.AI_GATEWAY_KEY
-
   if (hasGatewayCredentials() || isRunningOnVercel()) {
-    const provider = gatewayApiKey ? createGateway({ apiKey: gatewayApiKey }) : gateway
-    return provider(modelId)
+    ensureGatewayApiKeyAlias()
+    return modelId
   }
 
   if (hasAnthropicCredentials()) {
