@@ -1,0 +1,22 @@
+import { retro } from 'gradient-string'
+
+const CALI_TEXT = `
+  ██████╗ █████╗ ██╗     ██╗
+ ██╔════╝██╔══██╗██║     ██║
+ ██║     ███████║██║     ██║
+ ██║     ██╔══██║██║     ██║
+ ╚██████╗██║  ██║███████╗██║
+  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝
+`
+
+let bannerPrinted = false
+
+export function printRetroBanner() {
+  if (bannerPrinted) {
+    return
+  }
+
+  bannerPrinted = true
+  console.log(retro(CALI_TEXT))
+  console.log('Cali v2 for mobile QA.\n')
+}

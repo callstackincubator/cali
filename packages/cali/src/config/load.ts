@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
-import { createJiti } from 'jiti'
+import { cosmiconfig } from 'cosmiconfig'
 
 import type { QaResolvedConfig } from '../env/types.js'
 import { asArray, resolveFromCwd, uniqueStrings } from '../utils.js'
@@ -113,18 +113,30 @@ function mergeConfig(base: CaliQaConfig, override: CaliQaConfig): CaliQaConfig {
 }
 
 async function loadConfigFile(cwd: string, explicitPath?: string): Promise<CaliQaConfig> {
-  const defaultPath = path.join(cwd, 'cali.config.ts')
-  const configFilePath = explicitPath ? resolveFromCwd(cwd, explicitPath) : defaultPath
+  const explorer = cosmiconfig('cali', {
+    searchPlaces: [
+      'cali.config.ts',
+      'cali.config.js',
+      'cali.config.mjs',
+      'cali.config.cjs',
+      'cali.config.json',
+    ],
+  })
 
-  if (!existsSync(configFilePath)) {
-    return {}
+  if (explicitPath) {
+    const configFilePath = resolveFromCwd(cwd, explicitPath)
+
+    if (!existsSync(configFilePath)) {
+      return {}
+    }
+
+    const loaded = await explorer.load(configFilePath)
+    return CaliQaConfigSchema.parse(loaded?.config ?? {})
   }
 
-  const jiti = createJiti(import.meta.url, { moduleCache: false, fsCache: false })
-  const loaded = await jiti.import(configFilePath)
-  const candidate = ((loaded as { default?: unknown })?.default ?? loaded) as unknown
+  const loaded = await explorer.search(cwd)
 
-  return CaliQaConfigSchema.parse(candidate)
+  return CaliQaConfigSchema.parse(loaded?.config ?? {})
 }
 
 export async function loadQaConfig(options: LoadQaConfigOptions): Promise<QaResolvedConfig> {
