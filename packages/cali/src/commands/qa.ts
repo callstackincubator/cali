@@ -1,5 +1,3 @@
-import 'dotenv/config'
-
 import { readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 
@@ -15,7 +13,6 @@ import { runQaMobileRole } from '../roles/qa-mobile.js'
 import {
   ensureDirectory,
   humanizeScreenshotLabel,
-  normalizePlatform,
   resolveFromCwd,
   runCommand,
 } from '../utils.js'
@@ -186,10 +183,6 @@ async function publishReport(report: QaReport, publishers: string[]) {
 export async function runQaCommand(cli: QaCliOptions) {
   const cwd = process.cwd()
   const { config, context } = await resolveEnvironmentContext(cwd, cli)
-
-  if (!normalizePlatform(context.platform)) {
-    throw new Error(`Unsupported platform: ${context.platform}`)
-  }
 
   await ensureDirectory(context.outputDir)
   await ensureDirectory(context.screenshotsDir)

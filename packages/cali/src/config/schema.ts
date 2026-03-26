@@ -4,7 +4,7 @@ export const QaPresetNameSchema = z.enum(['eas-mobile-pr', 'local-android', 'loc
 export const EnvironmentAdapterNameSchema = z.enum(['eas-env', 'local-flags', 'json-file'])
 export const ToolPackNameSchema = z.enum(['skills', 'agent-device'])
 export const PublisherNameSchema = z.enum(['file', 'blob'])
-export const QaPlatformSchema = z.enum(['android', 'ios'])
+const QaPlatformSchema = z.enum(['android', 'ios'])
 
 const StringArraySchema = z.union([z.string(), z.array(z.string())]).optional()
 

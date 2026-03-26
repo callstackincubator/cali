@@ -7,7 +7,7 @@ import type { QaPlatform } from './env/types.js'
 
 const execFile = promisify(execFileCallback)
 
-export type CommandResult = {
+type CommandResult = {
   ok: boolean
   exitCode: number
   stdout: string

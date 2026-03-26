@@ -73,6 +73,5 @@ export async function fromJsonFile(
       taskTitle: cli.taskTitle ?? parsed.metadata?.taskTitle,
       taskBody: cli.taskBody ?? parsed.metadata?.taskBody,
     },
-    source: 'json-file',
   }
 }

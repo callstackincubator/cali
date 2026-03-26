@@ -147,8 +147,6 @@ export async function loadQaConfig(options: LoadQaConfigOptions): Promise<QaReso
   const merged = mergeConfig(presetConfig, fileConfig)
 
   return {
-    role: 'qa',
-    presetName,
     environmentAdapter:
       merged.environmentAdapter ?? (presetName === 'eas-mobile-pr' ? 'eas-env' : 'local-flags'),
     appId: merged.appId,

@@ -1,9 +1,4 @@
-import type {
-  EnvironmentAdapterName,
-  PublisherName,
-  QaPresetName,
-  ToolPackName,
-} from '../config/schema.js'
+import type { EnvironmentAdapterName, PublisherName, QaPresetName, ToolPackName } from '../config/schema.js'
 
 export type QaPlatform = 'android' | 'ios'
 
@@ -28,7 +23,6 @@ export type QaRuntimeContext = {
   screenshotsDir: string
   deviceName?: string
   metadata: QaMetadata
-  source: EnvironmentAdapterName
 }
 
 export type QaCliOptions = {
@@ -53,8 +47,6 @@ export type QaCliOptions = {
 }
 
 export type QaResolvedConfig = {
-  role: 'qa'
-  presetName?: QaPresetName
   environmentAdapter: EnvironmentAdapterName
   appId?: string
   platformDefaults: {

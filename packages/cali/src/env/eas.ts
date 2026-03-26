@@ -69,6 +69,5 @@ export async function fromEasEnv(
       taskTitle: cli.taskTitle,
       taskBody: cli.taskBody,
     },
-    source: 'eas-env',
   }
 }

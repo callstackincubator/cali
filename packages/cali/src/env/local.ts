@@ -49,6 +49,5 @@ export async function fromLocalFlags(
       taskTitle: cli.taskTitle,
       taskBody: cli.taskBody,
     },
-    source: 'local-flags',
   }
 }

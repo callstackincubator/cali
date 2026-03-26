@@ -3,7 +3,7 @@ import { cac } from 'cac'
 import { printRetroBanner } from './banner.js'
 import { registerQaCommand } from './qa.js'
 
-export function createCli() {
+function createCli() {
   const cli = cac('cali')
 
   cli.usage('<command> [options]')

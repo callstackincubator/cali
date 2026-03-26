@@ -42,7 +42,7 @@ function readOptionalNumber(value: unknown, flagName: string) {
   return parsed
 }
 
-export function normalizeQaCliOptions(options: QaCommandOptions): QaCliOptions {
+function normalizeQaCliOptions(options: QaCommandOptions): QaCliOptions {
   const platformValue = readOptionalString(options.platform)
   const platform = platformValue ? normalizePlatform(platformValue) : undefined
 

@@ -24,7 +24,6 @@ type RunQaMobileRoleOptions = {
 type QaMobileRoleResult = {
   reportInput: QaReportInput
   agentDeviceTrace: AgentDeviceTraceEntry[]
-  skills: SkillMetadata[]
 }
 
 const EMPTY_INPUT_SCHEMA = z.object({})
@@ -229,6 +228,5 @@ export async function runQaMobileRole(options: RunQaMobileRoleOptions): Promise<
   return {
     reportInput,
     agentDeviceTrace,
-    skills,
   }
 }
