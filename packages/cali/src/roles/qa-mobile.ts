@@ -1,8 +1,8 @@
-import { createGateway, ToolLoopAgent, gateway, stepCountIs, tool } from 'ai'
-import { createAnthropic } from '@ai-sdk/anthropic'
+import { ToolLoopAgent, stepCountIs, tool } from 'ai'
 import { z } from 'zod'
 
 import type { QaRuntimeContext } from '../env/types.js'
+import { createQaAgentModel } from '../model.js'
 import type { AgentDeviceTraceEntry, QaReportInput } from '../report/types.js'
 import { createAgentDeviceToolPack } from '../tools/agent-device.js'
 import {
@@ -42,37 +42,6 @@ const WRITE_REPORT_INPUT_SCHEMA = z.object({
     )
     .optional(),
 })
-
-function buildModel(modelId: string) {
-  const gatewayApiKey = process.env.AI_GATEWAY_API_KEY ?? process.env.AI_GATEWAY_KEY
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY
-  const anthropicAuthToken = process.env.ANTHROPIC_AUTH_TOKEN ?? process.env.CLAUDE_AUTH_TOKEN
-  const runningOnVercel = Boolean(
-    process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_OIDC_TOKEN
-  )
-
-  if (gatewayApiKey || runningOnVercel) {
-    const provider = gatewayApiKey ? createGateway({ apiKey: gatewayApiKey }) : gateway
-    return provider(modelId)
-  }
-
-  if (anthropicApiKey || anthropicAuthToken) {
-    const anthropic = createAnthropic({
-      ...(anthropicApiKey ? { apiKey: anthropicApiKey } : {}),
-      ...(anthropicAuthToken ? { authToken: anthropicAuthToken } : {}),
-    })
-
-    const anthropicModelId = modelId.startsWith('anthropic/')
-      ? modelId.slice('anthropic/'.length)
-      : modelId
-
-    return anthropic(anthropicModelId)
-  }
-
-  throw new Error(
-    'Missing AI credentials. Set AI_GATEWAY_API_KEY (or AI_GATEWAY_KEY), or ANTHROPIC_API_KEY / CLAUDE_API_KEY.'
-  )
-}
 
 function buildPrompt(
   context: QaRuntimeContext,
@@ -191,7 +160,7 @@ export async function runQaMobileRole(options: RunQaMobileRoleOptions): Promise<
     .join(' ')
 
   const agent = new ToolLoopAgent({
-    model: buildModel(modelId),
+    model: createQaAgentModel(modelId),
     instructions,
     tools,
     toolChoice: 'required',

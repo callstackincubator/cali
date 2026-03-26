@@ -31,8 +31,9 @@ cali qa \
 - Anthropic direct: `ANTHROPIC_API_KEY`
 - Anthropic alias: `CLAUDE_API_KEY`
 
-If only Anthropic credentials are present, Cali defaults to `anthropic/claude-sonnet-4.6`.
-Otherwise it defaults to `openai/gpt-5.4` through AI Gateway.
+Cali defaults to `anthropic/claude-sonnet-4.6`.
+If gateway credentials are present, that model is routed through AI Gateway.
+Direct provider support in this package is Anthropic only.
 
 ## Config
 
