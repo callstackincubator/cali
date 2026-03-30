@@ -1,4 +1,4 @@
-import { readdir, stat } from 'node:fs/promises'
+import { readdir, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 
 import { loadQaConfig } from '../config/load.js'
@@ -10,7 +10,22 @@ import { publishBlobReport } from '../report/publishers/blob.js'
 import { publishFileReport } from '../report/publishers/file.js'
 import type { QaReport, QaReportInput, ScreenshotInfo } from '../report/types.js'
 import { runQaMobileRole } from '../roles/qa-mobile.js'
+import {
+  DEFAULT_AGENT_DEVICE_SESSION_NAME,
+  getAgentDeviceSessionArgs,
+} from '../tools/agent-device.js'
 import { ensureDirectory, humanizeScreenshotLabel, resolveFromCwd, runCommand } from '../utils.js'
+
+function printPhase(title: string, detail?: string) {
+  console.log(detail ? `${title}: ${detail}` : title)
+}
+
+function summarizeReason(text: string) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean)
+}
 
 async function resolveEnvironmentContext(
   cwd: string,
@@ -46,32 +61,50 @@ async function resolveEnvironmentContext(
   }
 }
 
-async function bootstrapApp(context: QaRuntimeContext) {
+async function runAgentDeviceCommand(
+  sessionName: string,
+  command: string,
+  args: string[],
+  options: Parameters<typeof runCommand>[2] = {}
+) {
+  return runCommand(
+    'agent-device',
+    [...getAgentDeviceSessionArgs(sessionName), command, ...args],
+    options
+  )
+}
+
+async function bootstrapApp(context: QaRuntimeContext, sessionName: string) {
   const deviceSelectorArgs = context.deviceName
     ? ['--platform', context.platform, '--device', context.deviceName]
     : ['--platform', context.platform]
 
   if (context.deviceName) {
     if (context.platform === 'ios') {
-      await runCommand('agent-device', ['ensure-simulator', ...deviceSelectorArgs, '--boot'])
+      await runAgentDeviceCommand(sessionName, 'ensure-simulator', [
+        ...deviceSelectorArgs,
+        '--boot',
+      ])
     } else {
-      await runCommand('agent-device', ['boot', ...deviceSelectorArgs])
+      await runAgentDeviceCommand(sessionName, 'boot', deviceSelectorArgs)
     }
   }
 
   if (context.platform === 'android') {
-    let installResult = await runCommand(
-      'agent-device',
-      ['install', ...deviceSelectorArgs, context.appId, context.artifactPath],
+    let installResult = await runAgentDeviceCommand(
+      sessionName,
+      'install',
+      [...deviceSelectorArgs, context.appId, context.artifactPath],
       {
         allowFailure: true,
       }
     )
 
     if (!installResult.ok) {
-      installResult = await runCommand(
-        'agent-device',
-        ['reinstall', ...deviceSelectorArgs, context.appId, context.artifactPath],
+      installResult = await runAgentDeviceCommand(
+        sessionName,
+        'reinstall',
+        [...deviceSelectorArgs, context.appId, context.artifactPath],
         {
           allowFailure: true,
         }
@@ -84,9 +117,10 @@ async function bootstrapApp(context: QaRuntimeContext) {
       )
     }
   } else {
-    const reinstallResult = await runCommand(
-      'agent-device',
-      ['reinstall', ...deviceSelectorArgs, context.appId, context.artifactPath],
+    const reinstallResult = await runAgentDeviceCommand(
+      sessionName,
+      'reinstall',
+      [...deviceSelectorArgs, context.appId, context.artifactPath],
       {
         allowFailure: true,
       }
@@ -99,9 +133,10 @@ async function bootstrapApp(context: QaRuntimeContext) {
     }
   }
 
-  const openResult = await runCommand(
-    'agent-device',
-    ['open', ...deviceSelectorArgs, context.appId, '--relaunch'],
+  const openResult = await runAgentDeviceCommand(
+    sessionName,
+    'open',
+    [...deviceSelectorArgs, context.appId, '--relaunch'],
     {
       allowFailure: true,
     }
@@ -202,19 +237,31 @@ async function publishReport(report: QaReport, publishers: string[]) {
 
 export async function runQaCommand(cli: QaCliOptions) {
   const cwd = process.cwd()
+  printPhase('Resolving config')
   const { config, context } = await resolveEnvironmentContext(cwd, cli)
+  const sessionName = process.env.AGENT_DEVICE_SESSION ?? DEFAULT_AGENT_DEVICE_SESSION_NAME
 
+  printPhase(
+    'Preparing output',
+    `${context.platform} | ${context.deviceName ?? 'bound device'} | ${context.appId}`
+  )
   await ensureDirectory(context.outputDir)
+  await rm(context.screenshotsDir, { force: true, recursive: true })
   await ensureDirectory(context.screenshotsDir)
 
   let reportInput: QaReportInput
   let agentDeviceTrace: QaReport['agentDeviceTrace'] = []
 
   try {
-    await bootstrapApp(context)
+    printPhase('Bootstrapping app', context.artifactPath)
+    await bootstrapApp(context, sessionName)
+    printPhase('Bootstrap complete')
+
+    printPhase('Running QA agent', config.model)
     const roleResult = await runQaMobileRole({
       context,
       modelId: config.model,
+      sessionName,
       skillPaths: config.skillPaths,
       enabledToolPacks: config.enabledToolPacks,
       extraInstructions: config.extraInstructions,
@@ -225,15 +272,22 @@ export async function runQaCommand(cli: QaCliOptions) {
     agentDeviceTrace = roleResult.agentDeviceTrace
   } catch (unknownError) {
     const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
+    printPhase('Run blocked', summarizeReason(error.message))
     reportInput = createBlockedReport(error.message)
   }
 
   const screenshots = await listScreenshots(context.screenshotsDir)
   const report = composeReport(config.model, context, reportInput, screenshots, agentDeviceTrace)
+  printPhase('Publishing report', config.outputPublishers.join(', '))
   const publishedReport = await publishReport(report, config.outputPublishers)
 
   console.log(
     `QA report written to ${resolveFromCwd(cwd, path.join(context.outputDir, 'section.md'))}`
   )
-  console.log(`Overall status: ${publishedReport.overallStatus}`)
+  const reason = summarizeReason(publishedReport.summary)
+  console.log(
+    reason
+      ? `Overall status: ${publishedReport.overallStatus} (${reason})`
+      : `Overall status: ${publishedReport.overallStatus}`
+  )
 }

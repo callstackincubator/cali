@@ -1,4 +1,4 @@
-import { stepCountIs, tool, ToolLoopAgent } from 'ai'
+import { generateText, Output, stepCountIs, tool, ToolLoopAgent } from 'ai'
 import { z } from 'zod'
 
 import type { QaRuntimeContext } from '../env/types.js'
@@ -15,6 +15,7 @@ import {
 type RunQaMobileRoleOptions = {
   context: QaRuntimeContext
   modelId: string
+  sessionName: string
   skillPaths: string[]
   enabledToolPacks: string[]
   extraInstructions: string[]
@@ -86,6 +87,7 @@ function buildPrompt(
     '',
     `Save screenshots into ${context.screenshotsDir}/*.png with short descriptive filenames.`,
     'When text visibility matters, prefer a plain snapshot over image-heavy inspection.',
+    'Use canonical agent-device commands like back or home directly. Do not emulate navigation with press.',
     'Treat bootstrap as already handled. Do not install, reinstall, or open the app yourself.',
     'Do not inspect repository source files or modify project code.',
     'Finish by calling write_report exactly once.'
@@ -109,10 +111,54 @@ function hasToolActivity(
   })
 }
 
+async function synthesizeReportInput(
+  modelId: string,
+  context: QaRuntimeContext,
+  agentDeviceTrace: AgentDeviceTraceEntry[],
+  extraInstructions: string[],
+  prompt?: string
+) {
+  const evidence = {
+    taskPrompt: prompt ?? '',
+    platform: context.platform,
+    appId: context.appId,
+    buildId: context.buildId,
+    workflowUrl: context.workflowUrl,
+    screenshotsDir: context.screenshotsDir,
+    agentDeviceTrace,
+  }
+
+  const { output } = await generateText({
+    model: createQaAgentModel(modelId),
+    output: Output.object({
+      schema: WRITE_REPORT_INPUT_SCHEMA,
+      name: 'qa_report',
+      description: 'Structured QA result for a completed mobile QA run.',
+    }),
+    prompt: [
+      'Produce the final QA report for a completed mobile QA run.',
+      'Base the report only on the provided evidence. Do not invent actions, screenshots, or observations.',
+      'If the evidence shows the requested behavior worked, set overallStatus to "passed".',
+      'If the evidence is inconclusive, set overallStatus to "unsure".',
+      'If the environment was broken, set overallStatus to "blocked".',
+      prompt?.trim() ? `Task-specific focus:\n${prompt.trim()}` : '',
+      extraInstructions.length > 0
+        ? `Extra instructions:\n${extraInstructions.map((instruction) => `- ${instruction}`).join('\n')}`
+        : '',
+      `Evidence:\n${JSON.stringify(evidence, null, 2)}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  })
+
+  return output satisfies QaReportInput
+}
+
 export async function runQaMobileRole(
   options: RunQaMobileRoleOptions
 ): Promise<QaMobileRoleResult> {
-  const { context, modelId, skillPaths, enabledToolPacks, extraInstructions, prompt } = options
+  const { context, modelId, sessionName, skillPaths, enabledToolPacks, extraInstructions, prompt } =
+    options
   const skills = await discoverSkills(skillPaths)
   const agentDeviceTrace: AgentDeviceTraceEntry[] = []
   let reportInput: QaReportInput | undefined
@@ -130,7 +176,7 @@ export async function runQaMobileRole(
   }
 
   if (enabledToolPacks.includes('agent-device')) {
-    Object.assign(tools, createAgentDeviceToolPack({ trace: agentDeviceTrace }))
+    Object.assign(tools, createAgentDeviceToolPack({ trace: agentDeviceTrace, sessionName }))
   }
 
   tools.write_report = tool({
@@ -153,6 +199,7 @@ export async function runQaMobileRole(
     'Use only the provided tool packs and evidence from their results.',
     'The CLI already handled deterministic bootstrap. Never install, reinstall, or open the app.',
     'Refresh your view with snapshot-style commands after every meaningful UI transition.',
+    'Use canonical agent-device commands like back or home directly. Do not emulate them with press.',
     'Take screenshots for meaningful states and keep filenames short and descriptive.',
     'If the environment is broken or a prerequisite is missing, report blocked checks instead of guessing.',
     'If the evidence is visual but not conclusive from text automation, prefer overallStatus "unsure".',
@@ -187,12 +234,27 @@ export async function runQaMobileRole(
   })
 
   if (!reportInput) {
-    reportInput = {
-      overallStatus: 'blocked',
-      summary: result.text || 'The agent completed without calling write_report.',
-      checked: ['Produce a mobile QA report'],
-      issues: ['The write_report tool was not called by the agent.'],
-      nextSteps: ['Inspect the run logs and tighten the QA role instructions.'],
+    try {
+      reportInput = await synthesizeReportInput(
+        modelId,
+        context,
+        agentDeviceTrace,
+        extraInstructions,
+        prompt
+      )
+    } catch (unknownError) {
+      const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
+
+      reportInput = {
+        overallStatus: 'blocked',
+        summary: result.text || 'The agent completed without calling write_report.',
+        checked: ['Produce a mobile QA report'],
+        issues: [
+          'The write_report tool was not called by the agent.',
+          `Fallback report synthesis failed: ${error.message}`,
+        ],
+        nextSteps: ['Inspect the run logs and tighten the QA role instructions.'],
+      }
     }
   }
 
