@@ -43,15 +43,11 @@ Create `cali.config.ts` in the project root:
 export default {
   role: 'qa',
   preset: 'local-android',
-  skillPaths: ['./.agents/skills', './.cali/skills'],
   extraInstructions: ['Prioritize auth and onboarding flows.'],
 }
 ```
 
-By default, Cali discovers project skills from:
-
-- `./.agents/skills`
-- `./.cali/skills`
+By default, Cali discovers project skills from `./.agents/skills`.
 
 ## Installing Skills
 

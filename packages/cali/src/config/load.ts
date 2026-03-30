@@ -17,7 +17,7 @@ type LoadQaConfigOptions = {
 }
 
 function getBuiltInSkillPaths(cwd: string) {
-  return [path.join(cwd, '.agents', 'skills'), path.join(cwd, '.cali', 'skills')]
+  return [path.join(cwd, '.agents', 'skills')]
 }
 
 function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
