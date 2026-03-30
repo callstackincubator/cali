@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 
-const DEFAULT_QA_MODEL_ID = 'anthropic/claude-sonnet-4.6'
+const DEFAULT_QA_MODEL_ID = 'openai/gpt-5.4-mini'
 
 function hasGatewayCredentials() {
   return Boolean(process.env.AI_GATEWAY_API_KEY || process.env.AI_GATEWAY_KEY)
