@@ -47,31 +47,22 @@ async function resolveEnvironmentContext(
 }
 
 async function bootstrapApp(context: QaRuntimeContext) {
+  const deviceSelectorArgs = context.deviceName
+    ? ['--platform', context.platform, '--device', context.deviceName]
+    : ['--platform', context.platform]
+
   if (context.deviceName) {
     if (context.platform === 'ios') {
-      await runCommand('agent-device', [
-        'ensure-simulator',
-        '--platform',
-        'ios',
-        '--device',
-        context.deviceName,
-        '--boot',
-      ])
+      await runCommand('agent-device', ['ensure-simulator', ...deviceSelectorArgs, '--boot'])
     } else {
-      await runCommand('agent-device', [
-        'boot',
-        '--platform',
-        'android',
-        '--device',
-        context.deviceName,
-      ])
+      await runCommand('agent-device', ['boot', ...deviceSelectorArgs])
     }
   }
 
   if (context.platform === 'android') {
     let installResult = await runCommand(
       'agent-device',
-      ['install', context.appId, context.artifactPath],
+      ['install', ...deviceSelectorArgs, context.appId, context.artifactPath],
       {
         allowFailure: true,
       }
@@ -80,7 +71,7 @@ async function bootstrapApp(context: QaRuntimeContext) {
     if (!installResult.ok) {
       installResult = await runCommand(
         'agent-device',
-        ['reinstall', context.appId, context.artifactPath],
+        ['reinstall', ...deviceSelectorArgs, context.appId, context.artifactPath],
         {
           allowFailure: true,
         }
@@ -95,7 +86,7 @@ async function bootstrapApp(context: QaRuntimeContext) {
   } else {
     const reinstallResult = await runCommand(
       'agent-device',
-      ['reinstall', context.appId, context.artifactPath],
+      ['reinstall', ...deviceSelectorArgs, context.appId, context.artifactPath],
       {
         allowFailure: true,
       }
@@ -108,9 +99,13 @@ async function bootstrapApp(context: QaRuntimeContext) {
     }
   }
 
-  const openResult = await runCommand('agent-device', ['open', context.appId, '--relaunch'], {
-    allowFailure: true,
-  })
+  const openResult = await runCommand(
+    'agent-device',
+    ['open', ...deviceSelectorArgs, context.appId, '--relaunch'],
+    {
+      allowFailure: true,
+    }
+  )
 
   if (!openResult.ok) {
     throw new Error(
