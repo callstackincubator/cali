@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import path from 'node:path'
 
 import { cosmiconfig } from 'cosmiconfig'
@@ -17,7 +18,7 @@ type LoadQaConfigOptions = {
 }
 
 function getBuiltInSkillPaths(cwd: string) {
-  return [path.join(cwd, '.agents', 'skills')]
+  return [path.join(cwd, '.agents', 'skills'), path.join(homedir(), '.agents', 'skills')]
 }
 
 function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {

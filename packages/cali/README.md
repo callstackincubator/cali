@@ -47,7 +47,10 @@ export default {
 }
 ```
 
-By default, Cali discovers project skills from `./.agents/skills`.
+By default, Cali discovers skills from:
+
+- `./.agents/skills`
+- `~/.agents/skills`
 
 ## Installing Skills
 
@@ -59,7 +62,7 @@ npx skills add callstackincubator/agent-skills --agent codex --skill '*' -y
 ```
 
 This installs project-local skills into `./.agents/skills` and writes `skills-lock.json`.
-Those skills are picked up automatically by `cali qa`.
+Project-local and home-directory skills are both picked up automatically by `cali qa`.
 
 ## Outputs
 
