@@ -31,7 +31,6 @@ cali qa \
   --preset local-ios \
   --artifact ./artifacts/MyApp.app \
   --app-id com.example.myapp \
-  --device "iPhone 16" \
   --prompt "verify the onboarding copy on Screen B"
 ```
 
