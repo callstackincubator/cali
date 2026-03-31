@@ -1,6 +1,6 @@
 # cali
 
-Cali v2 is a QA-oriented CLI for mobile app review runs. The first shipped role is `cali qa`, which splits deterministic bootstrap from the agent phase and standardizes the resulting QA report.
+Cali v2 is a QA-oriented CLI for mobile app review runs. Today it ships `cali qa`, a role-based command that keeps deterministic app bootstrap outside the agent, lets the agent inspect and navigate the UI with a narrow tool surface, and publishes a reusable QA report for local and CI workflows.
 
 ## Current scope
 
@@ -11,7 +11,20 @@ Cali v2 is a QA-oriented CLI for mobile app review runs. The first shipped role 
 - publishers: `blob`, `file`
 - additive `--prompt`
 
-## Example
+The surface is intentionally role-based today. Interactive follow-up flows can be added later without changing the preset, adapter, or publisher model.
+
+## Core Concepts
+
+- preset: bundles a role with default platform settings, an environment adapter, skill paths, enabled tool packs, and publishers
+- environment adapter: resolves the normalized runtime context for a run, including platform, artifact path, app id, build metadata, and output directories
+- tool pack: the explicit set of tools exposed to the role, such as `skills` metadata access or `agent-device` UI automation
+- publisher: decides how the QA report is exposed after the run, such as writing files locally or uploading blobs
+
+## Examples
+
+### Local preset
+
+For local presets, `--artifact` is required and `appId` must come from `--app-id`, `config.appId`, or `APPLICATION_ID`. Cali does not infer it from `app.json` yet. `--device` is optional.
 
 ```bash
 cali qa \
@@ -20,6 +33,14 @@ cali qa \
   --app-id com.example.myapp \
   --device "iPhone 16" \
   --prompt "verify the onboarding copy on Screen B"
+```
+
+### EAS preset
+
+For `eas-mobile-pr`, you usually do not pass `--artifact` or `--app-id` on the command line. The EAS adapter reads them from `APP_PATH` and `APPLICATION_ID`, and it reads the platform from `QA_PLATFORM` unless you override it with `--platform`.
+
+```bash
+cali qa --preset eas-mobile-pr
 ```
 
 ## Credentials

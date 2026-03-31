@@ -28,6 +28,8 @@ type QaMobileRoleResult = {
 }
 
 const EMPTY_INPUT_SCHEMA = z.object({})
+const MAX_AGENT_STEPS = 12
+const REPORT_BUFFER_STEPS = 2
 const WRITE_REPORT_INPUT_SCHEMA = z.object({
   overallStatus: z.enum(['passed', 'failed', 'blocked', 'not_tested', 'unsure']),
   summary: z.string(),
@@ -213,12 +215,17 @@ export async function runQaMobileRole(
     instructions,
     tools,
     toolChoice: 'required',
-    stopWhen: stepCountIs(12),
+    stopWhen: stepCountIs(MAX_AGENT_STEPS),
     prepareStep: async ({ steps, stepNumber }) => {
       const hasWrittenReport = hasToolActivity(steps, 'write_report')
       const hasUsedDeviceTools = hasToolActivity(steps, 'agent_device')
 
-      if (hasWrittenReport || !hasUsedDeviceTools || stepNumber < 6) {
+      // Reserve the final steps for report emission if the model keeps exploring.
+      if (
+        hasWrittenReport ||
+        !hasUsedDeviceTools ||
+        stepNumber < MAX_AGENT_STEPS - REPORT_BUFFER_STEPS
+      ) {
         return {}
       }
 
