@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  🪄 An AI agent for building React Native apps 
+  🪄 AI agents for React Native and Expo workflows
 </p>
 
 ---
@@ -18,7 +18,7 @@ $ npx cali
 
 ## Wait, what?
 
-Cali is an AI agent that helps you build React Native apps. It takes all the utilities and functions of a React Native CLI and exposes them as tools to an LLM.
+Cali is a set of AI-agent surfaces for React Native and Expo workflows. It exposes mobile development and QA utilities to LLMs so they can help with deterministic setup, app inspection, debugging, and other agent-friendly tasks.
 
 Thanks to that, an LLM can help you with your React Native app development, without the need to remember commands, spending time troubleshooting errors, and in the future, much more.
 
@@ -26,9 +26,11 @@ Thanks to that, an LLM can help you with your React Native app development, with
 
 You can use Cali in three ways:
 
-- **standalone** - [`cali`](./packages/cali/README.md) - AI agent that runs in your terminal. Ready to use out of the box.
+- **standalone** - [`cali`](./packages/cali/README.md) - QA-oriented CLI for mobile app review runs in local and CI environments.
 - **with Vercel AI SDK** - [`cali-tools`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
 - **with Claude, Zed, and other MCP Clients** - [`cali-mcp-server`](./packages/mcp-server/README.md) - [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
+
+For a repo-oriented guide to the current Cali v2 architecture and planned mobile-agent roles, see [`AGENTS.md`](./AGENTS.md).
 
 ## What can it do?
 
@@ -69,4 +71,4 @@ Feel free to open an issue or a discussion to suggest ideas or report bugs. Happ
 
 Cali is an open source project and will always remain free to use. If you think it's cool, please star it 🌟. [Callstack](https://callstack.com) is a group of React and React Native geeks, contact us at [hello@callstack.com](mailto:hello@callstack.com) if you need any help with these or just want to say hi!
 
-Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥 
+Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥

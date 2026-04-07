@@ -1,7 +1,17 @@
 import { z } from 'zod'
 
-export const QaPresetNameSchema = z.enum(['eas-mobile-pr', 'local-android', 'local-ios'])
-export const EnvironmentAdapterNameSchema = z.enum(['eas-env', 'local-flags', 'json-file'])
+export const QaPresetNameSchema = z.enum([
+  'eas-mobile-pr',
+  'github-actions-pr',
+  'local-android',
+  'local-ios',
+])
+export const EnvironmentAdapterNameSchema = z.enum([
+  'eas-env',
+  'github-actions-env',
+  'local-flags',
+  'json-file',
+])
 export const ToolPackNameSchema = z.enum(['skills', 'agent-device'])
 export const PublisherNameSchema = z.enum(['file', 'blob'])
 const QaPlatformSchema = z.enum(['android', 'ios'])

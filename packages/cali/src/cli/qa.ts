@@ -75,7 +75,10 @@ function normalizeQaCliOptions(options: QaCommandOptions): QaCliOptions {
 export function registerQaCommand(cli: ReturnType<typeof cac>, printBanner: () => void) {
   cli
     .command('qa', 'Run the mobile QA role')
-    .option('--preset <name>', 'Built-in preset: eas-mobile-pr, local-android, local-ios')
+    .option(
+      '--preset <name>',
+      'Built-in preset: eas-mobile-pr, github-actions-pr, local-android, local-ios'
+    )
     .option('--config <path>', 'Path to cali.config.ts')
     .option('--prompt <text>', 'Add task-specific QA intent')
     .option('--json <path>', 'Load normalized environment context from JSON')

@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { loadQaConfig } from '../config/load.js'
 import { fromEasEnv } from '../env/eas.js'
+import { fromGitHubActionsEnv } from '../env/github-actions.js'
 import { fromJsonFile } from '../env/json-file.js'
 import { fromLocalFlags } from '../env/local.js'
 import type { QaCliOptions, QaRuntimeContext } from '../env/types.js'
@@ -85,6 +86,13 @@ async function resolveEnvironmentContext(
     return {
       config,
       context: await fromEasEnv(cwd, config, cli),
+    }
+  }
+
+  if (config.environmentAdapter === 'github-actions-env') {
+    return {
+      config,
+      context: await fromGitHubActionsEnv(cwd, config, cli),
     }
   }
 

@@ -5,8 +5,8 @@ Cali v2 is a QA-oriented CLI for mobile app review runs. Today it ships `cali qa
 ## Current scope
 
 - `cali qa`
-- presets: `eas-mobile-pr`, `local-android`, `local-ios`
-- environment adapters: EAS env, local flags, JSON context
+- presets: `eas-mobile-pr`, `github-actions-pr`, `local-android`, `local-ios`
+- environment adapters: EAS env, GitHub Actions env, local flags, JSON context
 - tool packs: `skills`, `agent-device`
 - publishers: `blob`, `file`
 - additive `--prompt`
@@ -41,6 +41,16 @@ For `eas-mobile-pr`, you usually do not pass `--artifact` or `--app-id` on the c
 ```bash
 cali qa --preset eas-mobile-pr
 ```
+
+### GitHub Actions preset
+
+For `github-actions-pr`, you usually do not pass `--artifact` or `--app-id` on the command line. The adapter reads the artifact from `APP_PATH` or `QA_ARTIFACT_PATH`, reads the app id from `APPLICATION_ID`, derives the workflow URL from GitHub Actions environment variables, and reads pull request metadata from `GITHUB_EVENT_PATH`.
+
+```bash
+cali qa --preset github-actions-pr
+```
+
+The GitHub Actions and EAS presets both require `QA_PLATFORM` unless you override it with `--platform`.
 
 ## Credentials
 
@@ -83,6 +93,10 @@ npx skills add callstackincubator/agent-skills --agent codex --skill '*' -y
 
 This installs project-local skills into `./.agents/skills` and writes `skills-lock.json`.
 Project-local and home-directory skills are both picked up automatically by `cali qa`.
+
+## Repo Guide
+
+For implementation details, preset guidance, and the roadmap for additional Cali roles in CI or sandbox environments, see [`AGENTS.md`](../../AGENTS.md).
 
 ## Outputs
 

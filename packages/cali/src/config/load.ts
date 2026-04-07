@@ -21,6 +21,19 @@ function getBuiltInSkillPaths(cwd: string) {
   return [path.join(cwd, '.agents', 'skills'), path.join(homedir(), '.agents', 'skills')]
 }
 
+function getDefaultEnvironmentAdapter(presetName: QaPresetName) {
+  switch (presetName) {
+    case 'eas-mobile-pr':
+      return 'eas-env' as const
+    case 'github-actions-pr':
+      return 'github-actions-env' as const
+    case 'local-ios':
+    case 'local-android':
+    default:
+      return 'local-flags' as const
+  }
+}
+
 function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
   const enabledToolPacks: ToolPackName[] = ['skills', 'agent-device']
   const outputPublishers: PublisherName[] = ['blob', 'file']
@@ -39,6 +52,16 @@ function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
         environmentAdapter: 'eas-env',
         extraInstructions: [
           'Infer concise acceptance criteria from PR metadata and prioritize user-visible flows.',
+          'Treat the repository as a black box and avoid source inspection unless the config explicitly says otherwise.',
+        ],
+      }
+    case 'github-actions-pr':
+      return {
+        ...common,
+        preset: presetName,
+        environmentAdapter: 'github-actions-env',
+        extraInstructions: [
+          'Infer concise acceptance criteria from GitHub pull request metadata and prioritize user-visible flows.',
           'Treat the repository as a black box and avoid source inspection unless the config explicitly says otherwise.',
         ],
       }
@@ -124,8 +147,7 @@ export async function loadQaConfig(options: LoadQaConfigOptions): Promise<QaReso
   const merged = mergeConfig(presetConfig, fileConfig)
 
   return {
-    environmentAdapter:
-      merged.environmentAdapter ?? (presetName === 'eas-mobile-pr' ? 'eas-env' : 'local-flags'),
+    environmentAdapter: merged.environmentAdapter ?? getDefaultEnvironmentAdapter(presetName),
     appId: merged.appId,
     platformDefaults: merged.platformDefaults ?? {},
     outputDir: merged.outputDir,
