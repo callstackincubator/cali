@@ -19,7 +19,6 @@ Minimal operating guide for AI coding agents in this repo.
 
 - `packages/cali`: standalone CLI role platform
 - `packages/tools`: reusable Cali tools for other runtimes
-- `packages/mcp-server`: MCP wrapper over the tools package
 
 ## Cali Runtime Shape
 
@@ -149,8 +148,11 @@ Required skill guidance should be preloaded through the tool-pack registry when 
 
 - For `packages/cali` TypeScript changes:
   - `bunx tsc --noEmit -p packages/cali/tsconfig.json`
+- For `packages/tools` TypeScript changes:
+  - `bunx tsc --noEmit -p packages/tools/tsconfig.json`
 - For build or runtime changes:
   - `bun run build:cli`
+  - `bun run build:tools` when `packages/tools` changes
 - For CLI surface changes:
   - `node packages/cali/dist/index.js --help`
   - relevant `--help` command smoke tests

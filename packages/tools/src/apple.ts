@@ -1,5 +1,6 @@
+import { rm } from 'node:fs/promises'
 import { tool } from 'ai'
-import { execSync } from 'child_process'
+import { execFileSync } from 'node:child_process'
 import { z } from 'zod'
 
 import {
@@ -29,7 +30,7 @@ export const installRubyGems = tool({
   description: 'Install Ruby gems, including CocoaPods',
   inputSchema: z.object({}),
   execute: async () => {
-    execSync('bundle install --path vendor/bundle', { stdio: 'inherit' })
+    execFileSync('bundle', ['install', '--path', 'vendor/bundle'], { stdio: 'inherit' })
     return {
       success: true,
     }
@@ -43,7 +44,7 @@ export const bootAppleSimulator = tool({
   }),
   execute: async ({ deviceId }) => {
     try {
-      execSync(`xcrun simctl boot ${deviceId}`, { stdio: 'inherit' })
+      execFileSync('xcrun', ['simctl', 'boot', deviceId], { stdio: 'inherit' })
       return {
         success: `Device ${deviceId} booted successfully.`,
       }
@@ -139,24 +140,21 @@ export const installPods = tool({
       }
 
       if (clean) {
-        execSync('rm -rf Pods Podfile.lock build', {
-          cwd: directory,
-          stdio: 'inherit',
-        })
+        await Promise.all([
+          rm(`${directory}/Pods`, { recursive: true, force: true }),
+          rm(`${directory}/Podfile.lock`, { force: true }),
+          rm(`${directory}/build`, { recursive: true, force: true }),
+        ])
       }
 
-      const commands = ['bundle exec pod install']
-
-      for (const command of commands) {
-        execSync(command, {
-          cwd: directory,
-          stdio: 'inherit',
-          env: {
-            ...process.env,
-            ...(newArchitecture ? { RCT_NEW_ARCH_ENABLED: '1' } : {}),
-          },
-        })
-      }
+      execFileSync('bundle', ['exec', 'pod', 'install'], {
+        cwd: directory,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          ...(newArchitecture ? { RCT_NEW_ARCH_ENABLED: '1' } : {}),
+        },
+      })
 
       return {
         success: true,

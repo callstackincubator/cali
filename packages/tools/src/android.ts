@@ -1,6 +1,6 @@
 import { tryRunAdbReverse } from '@react-native-community/cli-platform-android'
 import { tool } from 'ai'
-import { execSync } from 'child_process'
+import { execFileSync } from 'node:child_process'
 import dedent from 'dedent'
 import { EOL } from 'os'
 import { z } from 'zod'
@@ -96,7 +96,7 @@ export const buildAndroidApp = tool({
     reactNativeConfig_android_sourceDir: sourceDir,
     metroPort,
   }) => {
-    // tbd: taks selection
+    // tbd: task selection
     // tbd: user selection
     // tbd: flavor selection
 
@@ -183,7 +183,7 @@ export const launchAndroidAppOnDevice = tool({
 })
 
 function getEmulatorName(adbPath: string, deviceId: string) {
-  const buffer = execSync(`${adbPath} -s ${deviceId} emu avd name`)
+  const buffer = execFileSync(adbPath, ['-s', deviceId, 'emu', 'avd', 'name'])
   return buffer
     .toString()
     .split(EOL)[0]
@@ -192,9 +192,7 @@ function getEmulatorName(adbPath: string, deviceId: string) {
 }
 
 function getPhoneName(adbPath: string, deviceId: string) {
-  const buffer = execSync(`${adbPath} -s ${deviceId} shell getprop | grep ro.product.model`)
-  return buffer
+  return execFileSync(adbPath, ['-s', deviceId, 'shell', 'getprop', 'ro.product.model'])
     .toString()
-    .replace(/\[ro\.product\.model\]:\s*\[(.*)\]/, '$1')
     .trim()
 }

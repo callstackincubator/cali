@@ -22,9 +22,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "bun run build:tools && bun run build:mcp-server && bun run build:cli",
+    "build": "bun run build:tools && bun run build:cli",
     "build:tools": "cd packages/tools && bun run build",
-    "build:mcp-server": "cd packages/mcp-server && bun run build",
     "build:cli": "cd packages/cali && bun run build",
     "release": "release-it"
   },

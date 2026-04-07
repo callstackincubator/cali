@@ -126,9 +126,7 @@ export const listReactNativeLibraries = tool({
           Ask user to pick a library from the list.
           Offer user an option to try different search query.
           Offer user an option to cancel the operation and proceed with something else.
-
-          For each library, you can use "installNpmPackage" tool to install it.
-          You can also offer to display package description or visit Github repository.
+          You can also offer to display package description or visit the GitHub repository.
         `,
         libraries: mappedLibraries,
       }
