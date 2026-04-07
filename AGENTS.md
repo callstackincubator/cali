@@ -125,6 +125,25 @@ Avoid role-specific branching in shared helpers when a small role module will do
 
 Do not commit generated `artifacts/` output.
 
+## Handy Scripts
+
+When working in `packages/cali`, prefer the package scripts over reconstructing CLI commands:
+
+- built bundle:
+  - `bun run qa -- --help`
+  - `bun run qa:local:android -- --artifact ./app.apk --app-id com.example.app`
+  - `bun run qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+  - `bun run qa:eas`
+  - `bun run qa:gha`
+  - `bun run qa:json -- ./qa-context.json`
+- source/dev loop:
+  - `bun run dev:qa -- --help`
+  - `bun run dev:qa:local:android -- --artifact ./app.apk --app-id com.example.app`
+  - `bun run dev:qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+  - `bun run dev:qa:eas`
+  - `bun run dev:qa:gha`
+  - `bun run dev:qa:json -- ./qa-context.json`
+
 ## Documentation Touch Points
 
 When behavior changes, review:

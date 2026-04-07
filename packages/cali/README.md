@@ -82,6 +82,27 @@ By default, Cali discovers skills from:
 - `./.agents/skills`
 - `~/.agents/skills`
 
+## Package Scripts
+
+The `cali` package exposes handy scripts for the currently implemented `qa` role.
+Pass additional CLI flags after `--`.
+
+- `bun run qa -- --help`
+- `bun run qa:local:android -- --artifact ./app.apk --app-id com.example.app`
+- `bun run qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+- `bun run qa:eas`
+- `bun run qa:gha`
+- `bun run qa:json -- ./qa-context.json`
+
+For development against source instead of the built bundle:
+
+- `bun run dev:qa -- --help`
+- `bun run dev:qa:local:android -- --artifact ./app.apk --app-id com.example.app`
+- `bun run dev:qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+- `bun run dev:qa:eas`
+- `bun run dev:qa:gha`
+- `bun run dev:qa:json -- ./qa-context.json`
+
 ## Installing Skills
 
 For starter skills, use `npx skills` with the repos we trust:

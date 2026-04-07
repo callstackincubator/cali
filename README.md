@@ -31,6 +31,7 @@ You can use Cali in three ways:
 - **with Claude, Zed, and other MCP Clients** - [`cali-mcp-server`](./packages/mcp-server/README.md) - [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
 
 For a repo-oriented guide to the current Cali v2 architecture and planned mobile-agent roles, see [`AGENTS.md`](./AGENTS.md).
+For the standalone CLI’s current presets and package scripts, see [`packages/cali/README.md`](./packages/cali/README.md).
 
 ## What can it do?
 
