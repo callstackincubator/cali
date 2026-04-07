@@ -2,15 +2,19 @@ import { readFile } from 'node:fs/promises'
 
 import { put } from '@vercel/blob'
 
-import type { QaReport } from '../types.js'
+import type { CommandReport, PerfReviewReport, QaReport } from '../types.js'
 
 type BlobPublishOptions = {
-  report: QaReport
+  report: CommandReport
 }
 
-export async function publishBlobReport({ report }: BlobPublishOptions): Promise<QaReport> {
+function hasScreenshots(report: CommandReport): report is QaReport | PerfReviewReport {
+  return 'screenshots' in report
+}
+
+export async function publishBlobReport({ report }: BlobPublishOptions): Promise<CommandReport> {
   const token = process.env.BLOB_READ_WRITE_TOKEN
-  if (!token || report.screenshots.length === 0) {
+  if (!token || !hasScreenshots(report) || report.screenshots.length === 0) {
     return report
   }
 
@@ -20,10 +24,10 @@ export async function publishBlobReport({ report }: BlobPublishOptions): Promise
         const fileBuffer = await readFile(screenshot.absolutePath)
         const pathnameParts = [
           'cali',
-          'qa',
-          report.context.platform,
-          report.context.metadata.prNumber ? `pr-${report.context.metadata.prNumber}` : 'ad-hoc',
-          report.context.buildId || 'local-build',
+          report.command,
+          report.context.mobile?.platform ?? 'workspace',
+          report.context.pullRequest?.number ? `pr-${report.context.pullRequest.number}` : 'ad-hoc',
+          report.context.build?.id ?? 'local-build',
           screenshot.fileName,
         ]
         const blob = await put(pathnameParts.join('/'), fileBuffer, {
@@ -53,5 +57,5 @@ export async function publishBlobReport({ report }: BlobPublishOptions): Promise
   return {
     ...report,
     screenshots,
-  }
+  } satisfies CommandReport
 }

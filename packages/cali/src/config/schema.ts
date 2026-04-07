@@ -1,43 +1,63 @@
 import { z } from 'zod'
 
-const QaEnvNameSchema = z.enum(['mobile-pr', 'local-android', 'local-ios'])
-const ToolPackNameSchema = z.enum(['skills', 'agent-device'])
+const CaliEnvNameSchema = z.enum(['mobile-pr', 'local-android', 'local-ios'])
+const ToolPackNameSchema = z.enum([
+  'skills',
+  'agent-device',
+  'repo-read',
+  'repo-write',
+  'github',
+  'react-devtools',
+  'report',
+])
 const PublisherNameSchema = z.enum(['file', 'blob'])
-const QaPlatformSchema = z.enum(['android', 'ios'])
+const CommandIdSchema = z.enum(['qa', 'review', 'perf-review', 'dev'])
+const CaliPlatformSchema = z.enum(['android', 'ios'])
 
 const StringArraySchema = z.union([z.string(), z.array(z.string())]).optional()
 
-export function normalizeQaEnvName(value?: string): QaEnvName | undefined {
-  switch (value) {
-    case 'mobile-pr':
-    case 'local-android':
-    case 'local-ios':
-      return value
-    default:
-      return undefined
-  }
-}
+const MobileDefaultsSchema = z
+  .object({
+    platform: CaliPlatformSchema.optional(),
+    deviceName: z.string().optional(),
+    appId: z.string().optional(),
+  })
+  .optional()
 
-export const CaliQaConfigSchema = z.object({
-  role: z.literal('qa').optional(),
-  env: QaEnvNameSchema.optional(),
-  appId: z.string().optional(),
+const CommandConfigSchema = z.object({
   contextPath: z.string().optional(),
-  platformDefaults: z
-    .object({
-      platform: QaPlatformSchema.optional(),
-      deviceName: z.string().optional(),
-    })
-    .optional(),
-  outputDir: z.string().optional(),
-  skillPaths: z.array(z.string()).optional(),
   enabledToolPacks: z.array(ToolPackNameSchema).optional(),
   outputPublishers: z.array(PublisherNameSchema).optional(),
   extraInstructions: StringArraySchema,
   model: z.string().optional(),
+  mobileDefaults: MobileDefaultsSchema,
 })
 
-export type QaEnvName = z.infer<typeof QaEnvNameSchema>
+export function normalizeCaliEnvName(value?: string): CaliEnvName | undefined {
+  const result = CaliEnvNameSchema.safeParse(value)
+  return result.success ? result.data : undefined
+}
+
+export const CaliConfigSchema = z.object({
+  defaultCommand: CommandIdSchema.optional(),
+  env: CaliEnvNameSchema.optional(),
+  workspaceRoot: z.string().optional(),
+  skillPaths: z.array(z.string()).optional(),
+  outputPublishers: z.array(PublisherNameSchema).optional(),
+  model: z.string().optional(),
+  commands: z
+    .object({
+      qa: CommandConfigSchema.optional(),
+      review: CommandConfigSchema.optional(),
+      perfReview: CommandConfigSchema.optional(),
+      dev: CommandConfigSchema.optional(),
+    })
+    .optional(),
+})
+
+export type CaliEnvName = z.infer<typeof CaliEnvNameSchema>
 export type ToolPackName = z.infer<typeof ToolPackNameSchema>
 export type PublisherName = z.infer<typeof PublisherNameSchema>
-export type CaliQaConfig = z.infer<typeof CaliQaConfigSchema>
+export type CommandId = z.infer<typeof CommandIdSchema>
+export type CaliConfig = z.infer<typeof CaliConfigSchema>
+export type CaliCommandConfig = z.infer<typeof CommandConfigSchema>

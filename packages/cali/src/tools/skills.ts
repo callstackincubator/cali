@@ -11,13 +11,20 @@ type SkillMetadata = {
   skillFilePath: string
 }
 
-function stripFrontmatter(content: string) {
-  const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/)
-  return match ? content.slice(match[0].length).trim() : content.trim()
+type PreloadedSkillDocument = {
+  skillName: string
+  relativePath: string
+  absolutePath: string
+  content: string
 }
 
-function parseFrontmatter(content: string) {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+type RequiredSkillDocument = {
+  name: string
+  preloadPaths: string[]
+}
+
+function parseSkillFile(content: string) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)/)
   if (!match?.[1]) {
     throw new Error('No frontmatter found')
   }
@@ -39,6 +46,7 @@ function parseFrontmatter(content: string) {
   return {
     name,
     description,
+    body: (match[2] ?? '').trim(),
   }
 }
 
@@ -67,6 +75,21 @@ function findSkill(skills: SkillMetadata[], name: string) {
   return skill
 }
 
+async function readSkillDocument(skill: SkillMetadata, relativeFilePath: string) {
+  const absolutePath =
+    relativeFilePath === 'SKILL.md'
+      ? skill.skillFilePath
+      : resolveSkillFilePath(skill, relativeFilePath)
+  const content = await readFile(absolutePath, 'utf8')
+
+  return {
+    skillName: skill.name,
+    relativePath: relativeFilePath,
+    absolutePath,
+    content: relativeFilePath === 'SKILL.md' ? parseSkillFile(content).body : content.trim(),
+  } satisfies PreloadedSkillDocument
+}
+
 export async function discoverSkills(directories: string[]) {
   const skills: SkillMetadata[] = []
   const seenNames = new Set<string>()
@@ -89,8 +112,8 @@ export async function discoverSkills(directories: string[]) {
 
       try {
         const content = await readFile(skillFilePath, 'utf8')
-        const frontmatter = parseFrontmatter(content)
-        const key = frontmatter.name.toLowerCase()
+        const skillFile = parseSkillFile(content)
+        const key = skillFile.name.toLowerCase()
 
         if (seenNames.has(key)) {
           continue
@@ -98,8 +121,8 @@ export async function discoverSkills(directories: string[]) {
 
         seenNames.add(key)
         skills.push({
-          name: frontmatter.name,
-          description: frontmatter.description,
+          name: skillFile.name,
+          description: skillFile.description,
           directoryPath: skillDirectoryPath,
           skillFilePath,
         })
@@ -112,17 +135,62 @@ export async function discoverSkills(directories: string[]) {
   return skills.sort((left, right) => left.name.localeCompare(right.name))
 }
 
-export function buildSkillsPrompt(skills: SkillMetadata[]) {
-  if (skills.length === 0) {
+export function buildSkillsPrompt(
+  skills: SkillMetadata[],
+  options?: { excludeSkillNames?: string[] }
+) {
+  const excludedSkillNames = new Set(
+    (options?.excludeSkillNames ?? []).map((skillName) => skillName.toLowerCase())
+  )
+  const availableSkills = skills.filter(
+    (skill) => !excludedSkillNames.has(skill.name.toLowerCase())
+  )
+
+  if (availableSkills.length === 0) {
     return 'No local skills were discovered for this run.'
   }
 
   return [
     'Available local skills:',
-    ...skills.map((skill) => `- ${skill.name}: ${skill.description}`),
+    ...availableSkills.map((skill) => `- ${skill.name}: ${skill.description}`),
     '',
-    'Load a skill before relying on its instructions. Only read files inside a skill after loading it.',
+    'These skills are not loaded yet. Call load_skill before relying on their instructions. Only read files inside a skill after loading it.',
   ].join('\n')
+}
+
+export async function preloadSkillDocuments(
+  skills: SkillMetadata[],
+  requiredSkills: RequiredSkillDocument[]
+) {
+  const documents: PreloadedSkillDocument[] = []
+
+  for (const requiredSkill of requiredSkills) {
+    const skill = findSkill(skills, requiredSkill.name)
+
+    for (const preloadPath of requiredSkill.preloadPaths) {
+      documents.push(await readSkillDocument(skill, preloadPath))
+    }
+  }
+
+  return documents
+}
+
+export function buildPreloadedSkillsPrompt(documents: PreloadedSkillDocument[]) {
+  if (documents.length === 0) {
+    return ''
+  }
+
+  const preloadedSkillNames = [...new Set(documents.map((document) => document.skillName))]
+  const sections = [
+    'Required skill guidance loaded for this run.',
+    `Already loaded skills: ${preloadedSkillNames.join(', ')}`,
+  ]
+
+  for (const document of documents) {
+    sections.push('', `## ${document.skillName} :: ${document.relativePath}`, document.content)
+  }
+
+  return sections.join('\n')
 }
 
 export function createSkillsToolPack(skills: SkillMetadata[]) {
@@ -145,13 +213,14 @@ export function createSkillsToolPack(skills: SkillMetadata[]) {
         const skill = findSkill(skills, name)
         loadedSkills.add(skill.name.toLowerCase())
         const content = await readFile(skill.skillFilePath, 'utf8')
+        const skillFile = parseSkillFile(content)
 
         return {
           name: skill.name,
           description: skill.description,
           skillDirectory: skill.directoryPath,
           skillFilePath: skill.skillFilePath,
-          content: stripFrontmatter(content),
+          content: skillFile.body,
         }
       },
     }),
@@ -181,4 +250,4 @@ export function createSkillsToolPack(skills: SkillMetadata[]) {
   }
 }
 
-export type { SkillMetadata }
+export type { PreloadedSkillDocument, RequiredSkillDocument, SkillMetadata }

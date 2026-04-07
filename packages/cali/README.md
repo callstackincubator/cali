@@ -1,68 +1,131 @@
 # cali
 
-Cali v2 is a QA-oriented CLI for mobile app review runs. Today it ships `cali qa`, a role-based command that keeps deterministic app bootstrap outside the agent, lets the agent inspect and navigate the UI with a narrow tool surface, and publishes a reusable QA report for local and CI workflows.
+Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It runs first-class agent commands on top of a shared runtime model:
 
-## Current scope
-
-- `cali qa`
+- commands: `qa`, `review`, `perf-review`, `dev`
 - envs: `mobile-pr`, `local-android`, `local-ios`
-- runtime context: one JSON context file plus CLI flag overrides
-- tool packs: `skills`, `agent-device`
-- publishers: `blob`, `file`
+- one shared `cali-context.json` runtime contract
+- explicit tool packs per command
+- publisher-based outputs
 - additive `--prompt`
-
-The surface is intentionally role-based today. Interactive follow-up flows can be added later without changing the env, context, or publisher model.
 
 ## Core Concepts
 
-- env: bundles a role with default platform settings, skill paths, enabled tool packs, publishers, and default instructions
-- context file: the explicit JSON input that defines the normalized runtime context for a run, including platform, artifact path, app id, build metadata, and output directories
-- tool pack: the explicit set of tools exposed to the role, such as `skills` metadata access or `agent-device` UI automation
-- publisher: decides how the QA report is exposed after the run, such as writing files locally or uploading blobs
+- command: the user-facing role entrypoint such as `cali qa` or `cali review`
+- env: default runtime shape for a command, such as CI-style `mobile-pr` or local mobile envs
+- context file: the explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
+- tool pack: a bounded capability surface such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
+- publisher: how reports are exposed after a run, such as `file` or `blob`
+
+## Commands
+
+- `cali qa`
+  - mobile QA pass with `agent-device`
+- `cali review`
+  - findings-first PR/repository review
+- `cali perf-review`
+  - runtime performance review with `agent-device` and `react-devtools`
+- `cali dev`
+  - repository-backed implementation flow
+
+## Shared Context
+
+All commands use one shared `cali-context.json` contract. Commands only require the sections they actually use.
+
+```json
+{
+  "workspaceRoot": ".",
+  "repository": {
+    "provider": "github.com",
+    "owner": "acme",
+    "name": "mobile-app",
+    "defaultBranch": "main",
+    "currentBranch": "feature/onboarding-copy"
+  },
+  "pullRequest": {
+    "number": 42,
+    "title": "Fix onboarding CTA",
+    "body": "Acceptance criteria: the new CTA copy is visible on Screen B.",
+    "url": "https://github.com/acme/mobile-app/pull/42",
+    "labels": ["mobile", "qa"],
+    "isDraft": false,
+    "baseBranch": "main",
+    "headBranch": "feature/onboarding-copy"
+  },
+  "mobile": {
+    "platform": "android",
+    "artifactPath": "./artifacts/app.apk",
+    "appId": "com.example.myapp",
+    "deviceName": "Pixel 9"
+  },
+  "build": {
+    "id": "gha-run-123",
+    "workflowUrl": "https://github.com/acme/mobile-app/actions/runs/123",
+    "logsUrl": "https://github.com/acme/mobile-app/actions/runs/123/job/456"
+  },
+  "output": {
+    "outputDir": "./artifacts/qa"
+  },
+  "qa": {
+    "acceptanceCriteria": ["Screen B shows the updated CTA copy", "The CTA remains tappable"]
+  },
+  "perfReview": {
+    "targetFlow": "Checkout",
+    "profilingGoals": ["rerenders", "slow interactions"]
+  },
+  "dev": {
+    "allowedValidations": ["bun test", "bunx tsc --noEmit"],
+    "writePolicy": "workspace",
+    "pushPolicy": "disabled"
+  }
+}
+```
+
+Flags always win over the context file. For example, `--platform`, `--artifact`, `--app-id`, `--output-dir`, `--pr-number`, or `--task-id` override the JSON values. For local mobile runs, `--app-id` is optional when Cali can infer it from the artifact.
 
 ## Examples
 
-### Local env
-
-For local envs, `--artifact` is required and `appId` must come from `--app-id` or `config.appId`. Cali does not infer it from `app.json` yet. `--device` is optional.
+### Local QA
 
 ```bash
 cali qa \
   --env local-ios \
   --artifact ./artifacts/MyApp.app \
-  --app-id com.example.myapp \
   --prompt "verify the onboarding copy on Screen B"
 ```
 
-### Remote env with a context file
+Local mobile behavior:
 
-For remote environments such as GitHub Actions, EAS workflows, or custom sandboxes, write one normalized JSON context file and override fields only when needed. `mobile-pr` expects that file.
+- each run gets a unique `agent-device` session name such as `ios-a1b2c`
+- local Android reuses the single booted emulator/device when exactly one is available, otherwise pass `--device`
+- local envs try `open --relaunch` before reinstalling
+- `local-ios` reuses the single booted simulator when exactly one is available, otherwise pass `--device`
 
-```json
-{
-  "platform": "android",
-  "artifactPath": "./artifacts/app.apk",
-  "appId": "com.example.myapp",
-  "buildId": "gha-run-123",
-  "workflowUrl": "https://github.com/acme/mobile/actions/runs/123",
-  "metadata": {
-    "prNumber": 42,
-    "prTitle": "Fix onboarding CTA",
-    "prLabels": ["mobile", "qa"],
-    "isDraft": false
-  }
-}
-```
+### CI-style QA or review
 
 ```bash
-cali qa --env mobile-pr --context ./qa-context.json
+cali qa --env mobile-pr --context ./cali-context.json
+cali review --env mobile-pr --context ./cali-context.json
 ```
 
-Flags always win over the context file. For example, `--platform ios` or `--output-dir ./artifacts/custom` overrides the JSON value.
+### Runtime performance review
+
+```bash
+cali perf-review \
+  --env mobile-pr \
+  --context ./cali-context.json \
+  --prompt "profile the checkout flow"
+```
+
+### Repo-backed implementation
+
+```bash
+cali dev --env mobile-pr --context ./cali-context.json --prompt "implement issue 123"
+```
 
 ## Credentials
 
-`cali qa` supports two model auth paths:
+Cali supports two model auth paths:
 
 - AI Gateway: `AI_GATEWAY_API_KEY`
 - AI Gateway alias: `AI_GATEWAY_KEY`
@@ -71,39 +134,91 @@ Flags always win over the context file. For example, `--platform ios` or `--outp
 
 Cali defaults to `openai/gpt-5.4-mini`. If gateway credentials are present, that model is routed through AI Gateway. Direct provider support in this package is Anthropic only.
 
+Optional publisher/runtime credentials:
+
+- `BLOB_READ_WRITE_TOKEN` for blob screenshot uploads
+
+## Required CLIs
+
+Some commands shell out to local binaries:
+
+- `qa`: requires `agent-device`
+- `perf-review`: requires `agent-device` and `agent-react-devtools`
+- `review`: requires `git` and `rg`
+- `dev`: requires `git`, `rg`, and `zsh`
+
+If one of these is missing, Cali stops with an actionable error instead of trying to install it automatically.
+
 ## Config
 
 Create `cali.config.ts` in the project root:
 
 ```ts
 export default {
-  role: 'qa',
-  env: 'local-android',
-  contextPath: './qa-context.json',
-  extraInstructions: ['Prioritize auth and onboarding flows.'],
+  defaultCommand: 'qa',
+  env: 'mobile-pr',
+  workspaceRoot: '.',
+  skillPaths: ['.agents/skills'],
+  commands: {
+    qa: {
+      contextPath: './cali-context.json',
+      extraInstructions: ['Prioritize auth and onboarding flows.'],
+    },
+    review: {
+      outputPublishers: ['file'],
+    },
+    perfReview: {
+      extraInstructions: ['Focus on rerender hotspots first.'],
+    },
+  },
 }
 ```
+
+If `defaultCommand` is set, running plain `cali` with no command will execute that default command instead of showing help.
 
 By default, Cali discovers skills from:
 
 - `./.agents/skills`
 - `~/.agents/skills`
 
+## Tool Packs
+
+Built-in tool pack ids:
+
+- `skills`
+- `agent-device`
+- `repo-read`
+- `repo-write`
+- `github`
+- `react-devtools`
+- `report`
+
+Command defaults:
+
+- `qa`: `skills`, `agent-device`, `report`
+- `review`: `repo-read`, `github`, `skills`, `report`
+- `perf-review`: `skills`, `agent-device`, `react-devtools`, `repo-read`, `report`
+- `dev`: `repo-read`, `repo-write`, `github`, `skills`, `report`
+
 ## Package Scripts
 
-The `cali` package exposes handy scripts for the currently implemented `qa` role. Pass additional CLI flags after `--`.
+Built bundle:
 
 - `bun run qa -- --help`
-- `bun run qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
-- `bun run qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-- `bun run qa:env:mobile-pr -- --context ./qa-context.json`
+- `bun run review -- --help`
+- `bun run perf-review -- --help`
+- `bun run dev:command -- --help`
+- `bun run qa:env:mobile-pr -- --context ./cali-context.json`
+- `bun run review:env:mobile-pr -- --context ./cali-context.json`
+- `bun run perf-review:env:mobile-pr -- --context ./cali-context.json`
+- `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
 
-For development against source instead of the built bundle:
+Source/dev loop:
 
 - `bun run dev:qa -- --help`
-- `bun run dev:qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
-- `bun run dev:qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-- `bun run dev:qa:env:mobile-pr -- --context ./qa-context.json`
+- `bun run dev:review -- --help`
+- `bun run dev:perf-review -- --help`
+- `bun run dev:dev-command -- --help`
 
 ## Installing Skills
 
@@ -114,19 +229,23 @@ npx skills add callstackincubator/agent-device --agent codex --skill '*' -y
 npx skills add callstackincubator/agent-skills --agent codex --skill '*' -y
 ```
 
-This installs project-local skills into `./.agents/skills` and writes `skills-lock.json`.
-Project-local and home-directory skills are both picked up automatically by `cali qa`.
-
-## Repo Guide
-
-For implementation details, env guidance, and the roadmap for additional Cali roles in CI or sandbox environments, see [`AGENTS.md`](../../AGENTS.md).
+If you want to use performance review flows, make sure the relevant skills are installed too, such as `react-devtools`.
 
 ## Outputs
 
-By default the file publisher writes:
+The file publisher writes:
 
-- `artifacts/qa/report.json`
-- `artifacts/qa/section.md`
-- `artifacts/qa/status.txt`
+- `report.json`
+- `section.md`
+- `status.txt`
+- `publisher-manifest.json`
 
-If `BLOB_READ_WRITE_TOKEN` is set, the blob publisher uploads screenshots and enriches the JSON report with blob URLs.
+The default output directory is `artifacts/<command>`.
+
+For `qa` and `perf-review`, screenshots are saved under `artifacts/<command>/screenshots`.
+
+If `BLOB_READ_WRITE_TOKEN` is set, the blob publisher uploads screenshots and enriches the report with blob URLs.
+
+## Repo Guide
+
+For implementation details, runtime contracts, and guidance for extending Cali with new commands, see [`AGENTS.md`](../../AGENTS.md).

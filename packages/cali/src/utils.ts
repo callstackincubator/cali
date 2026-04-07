@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 
-import type { QaPlatform } from './env/types.js'
+import type { CaliPlatform } from './runtime/types.js'
 
 const execFile = promisify(execFileCallback)
 
@@ -23,8 +23,11 @@ type CommandOptions = {
 type ExecFileError = Error & {
   stdout?: string
   stderr?: string
+  status?: number | null
   code?: number | string
 }
+
+const commandExistsCache = new Map<string, boolean>()
 
 export async function runCommand(
   file: string,
@@ -50,7 +53,12 @@ export async function runCommand(
     const error = unknownError as ExecFileError
     const stdout = typeof error.stdout === 'string' ? error.stdout : ''
     const stderr = typeof error.stderr === 'string' ? error.stderr : error.message
-    const exitCode = typeof error.code === 'number' ? error.code : 1
+    const exitCode =
+      typeof error.status === 'number'
+        ? error.status
+        : typeof error.code === 'number'
+          ? error.code
+          : 1
 
     if (!allowFailure) {
       throw new Error(
@@ -65,6 +73,23 @@ export async function runCommand(
       stderr,
     }
   }
+}
+
+export async function ensureCommandExists(commandName: string, installHint: string) {
+  const cached = commandExistsCache.get(commandName)
+  if (cached === true) {
+    return
+  }
+
+  const result = await runCommand('which', [commandName], { allowFailure: true })
+  if (result.ok && result.stdout.trim()) {
+    commandExistsCache.set(commandName, true)
+    return
+  }
+
+  throw new Error(
+    `Missing required CLI: ${commandName}\n\nInstall it before running Cali:\n${installHint}`
+  )
 }
 
 export async function ensureDirectory(directoryPath: string) {
@@ -111,7 +136,7 @@ export function resolveFromCwd(cwd: string, targetPath: string) {
   return path.isAbsolute(targetPath) ? targetPath : path.resolve(cwd, targetPath)
 }
 
-export function normalizePlatform(value: string | undefined): QaPlatform | undefined {
+export function normalizePlatform(value: string | undefined): CaliPlatform | undefined {
   if (value === 'android' || value === 'ios') {
     return value
   }

@@ -12,10 +12,19 @@
     "qa:env:local:android": "node ./dist/index.js qa --env local-android",
     "qa:env:local:ios": "node ./dist/index.js qa --env local-ios",
     "qa:env:mobile-pr": "node ./dist/index.js qa --env mobile-pr",
+    "review": "node ./dist/index.js review",
+    "review:env:mobile-pr": "node ./dist/index.js review --env mobile-pr",
+    "perf-review": "node ./dist/index.js perf-review",
+    "perf-review:env:mobile-pr": "node ./dist/index.js perf-review --env mobile-pr",
+    "dev:command": "node ./dist/index.js dev",
+    "dev:command:env:mobile-pr": "node ./dist/index.js dev --env mobile-pr",
     "dev:qa": "node --import=tsx ./src/cli.ts qa",
     "dev:qa:env:local:android": "node --import=tsx ./src/cli.ts qa --env local-android",
     "dev:qa:env:local:ios": "node --import=tsx ./src/cli.ts qa --env local-ios",
-    "dev:qa:env:mobile-pr": "node --import=tsx ./src/cli.ts qa --env mobile-pr"
+    "dev:qa:env:mobile-pr": "node --import=tsx ./src/cli.ts qa --env mobile-pr",
+    "dev:review": "node --import=tsx ./src/cli.ts review",
+    "dev:perf-review": "node --import=tsx ./src/cli.ts perf-review",
+    "dev:dev-command": "node --import=tsx ./src/cli.ts dev"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

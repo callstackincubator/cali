@@ -1,26 +1,50 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 
-import type { AgentDeviceTraceEntry } from '../report/types.js'
-import { parseJson, runCommand, trimText } from '../utils.js'
+import type { ToolTraceEntry } from '../runtime/types.js'
+import { ensureCommandExists, parseJson, runCommand, trimText } from '../utils.js'
 
-export const DEFAULT_AGENT_DEVICE_SESSION_NAME = 'default'
-const DEFAULT_AGENT_DEVICE_SESSION_LOCK = 'strip'
+const DEFAULT_AGENT_DEVICE_SESSION_LOCK = 'reject'
 
 type CreateAgentDeviceToolPackOptions = {
-  trace: AgentDeviceTraceEntry[]
-  sessionName?: string
+  trace: ToolTraceEntry[]
+  sessionName: string
 }
 
-export function getAgentDeviceSessionArgs(
-  sessionName = process.env.AGENT_DEVICE_SESSION ?? DEFAULT_AGENT_DEVICE_SESSION_NAME
-) {
-  return ['--session', sessionName, '--session-lock', DEFAULT_AGENT_DEVICE_SESSION_LOCK]
+type SessionArgsOptions = {
+  lockTarget?: boolean
+}
+
+export function getAgentDeviceSessionArgs(sessionName: string, options: SessionArgsOptions = {}) {
+  const args = ['--session', sessionName]
+
+  if (options.lockTarget) {
+    args.push('--session-lock', DEFAULT_AGENT_DEVICE_SESSION_LOCK)
+  }
+
+  return args
+}
+
+function normalizeCommandInvocation(command: string, args: string[]) {
+  const trimmedCommand = command.trim()
+
+  if (args.length > 0 || !trimmedCommand.includes(' ')) {
+    return {
+      command: trimmedCommand,
+      args,
+    }
+  }
+
+  const [normalizedCommand, ...normalizedArgs] = trimmedCommand.split(/\s+/g)
+  return {
+    command: normalizedCommand,
+    args: normalizedArgs,
+  }
 }
 
 export function createAgentDeviceToolPack(options: CreateAgentDeviceToolPackOptions) {
   const { trace, sessionName } = options
-  const sessionArgs = getAgentDeviceSessionArgs(sessionName)
+  const sessionArgs = getAgentDeviceSessionArgs(sessionName, { lockTarget: true })
   const inputSchema = z.object({
     command: z
       .string()
@@ -36,7 +60,9 @@ export function createAgentDeviceToolPack(options: CreateAgentDeviceToolPackOpti
         'Run an agent-device command for mobile UI automation and screenshot capture. Use canonical subcommands like back or home directly; do not emulate them with press.',
       inputSchema,
       execute: async ({ command, args = [] }) => {
-        const fullCommand = [...sessionArgs, command, ...args]
+        await ensureCommandExists('agent-device', 'npm i -g agent-device')
+        const normalized = normalizeCommandInvocation(command, args)
+        const fullCommand = [...sessionArgs, normalized.command, ...normalized.args]
         const result = await runCommand('agent-device', fullCommand, {
           allowFailure: true,
         })

@@ -7,249 +7,195 @@ Minimal operating guide for AI coding agents in this repo.
 - Classify the task:
   - Info-only: do not edit code or run checks unless needed.
   - Code change: make the smallest scoped edit and run the lightest relevant validation.
-- Read at most 3 files first:
-  - the owning command, role, or context loader
-  - one shared config or helper file
-  - one relevant doc file if the task changes CLI behavior
+- Read at most 4 files first:
+  - the owning command module
+  - one role module
+  - one shared runtime file
+  - one relevant doc file if the CLI or context contract changes
 - Define concrete success criteria before editing.
-- Prefer package docs and code over guessing current behavior.
+- Prefer the shared runtime contracts over command-local improvisation.
 
 ## Repo Shape
 
-- `packages/cali`: the standalone CLI, currently centered on `cali qa`
-- `packages/tools`: reusable Cali tools for other agent runtimes
+- `packages/cali`: standalone CLI role platform
+- `packages/tools`: reusable Cali tools for other runtimes
 - `packages/mcp-server`: MCP wrapper over the tools package
 
-## Cali v2 Architecture
+## Cali Runtime Shape
 
-The `cali` package is role-oriented.
+The `cali` package is now a small role platform.
 
 - CLI entry:
   - `packages/cali/src/cli.ts`
   - `packages/cali/src/cli/app.ts`
-  - `packages/cali/src/cli/qa.ts`
-- Runtime orchestration:
-  - `packages/cali/src/commands/qa.ts`
-- Config and env defaults:
+  - `packages/cali/src/cli/*.ts`
+- Command orchestration:
+  - `packages/cali/src/commands/*.ts`
+- Shared runtime:
+  - `packages/cali/src/runtime/types.ts`
+  - `packages/cali/src/runtime/context.ts`
+  - `packages/cali/src/runtime/tool-packs.ts`
+  - `packages/cali/src/runtime/tool-loop-role.ts`
+  - `packages/cali/src/runtime/publishers.ts`
+  - `packages/cali/src/runtime/mobile.ts`
+- Config:
   - `packages/cali/src/config/schema.ts`
   - `packages/cali/src/config/load.ts`
-- Runtime context loaders:
-  - `packages/cali/src/env/local.ts`
-  - `packages/cali/src/env/context-file.ts`
-- Role implementation:
-  - `packages/cali/src/roles/qa-mobile.ts`
+- Roles:
+  - `packages/cali/src/roles/*.ts`
 - Tool packs:
-  - `packages/cali/src/tools/agent-device.ts`
-  - `packages/cali/src/tools/skills.ts`
-- Reports and publishers:
+  - `packages/cali/src/tools/*.ts`
+- Reports:
   - `packages/cali/src/report/types.ts`
   - `packages/cali/src/report/render.ts`
-  - `packages/cali/src/report/publishers/file.ts`
-  - `packages/cali/src/report/publishers/blob.ts`
+  - `packages/cali/src/report/publishers/*.ts`
 
-## Current Role
+## Public Commands
 
-- Implemented:
-  - `qa`
-- Role contract:
-  - deterministic bootstrap stays in the CLI command
-  - the agent inspects and navigates the app only after bootstrap
-  - reports are written through the standard QA report schema
-  - publishers decide how outputs are exposed
+Implemented first-class commands:
 
-## Env Model
+- `qa`
+- `review`
+- `perf-review`
+- `dev`
 
-Envs should stay thin.
+`publish` is intentionally not implemented. Release automation belongs in CI or in `dev`-driven pipeline work, not as an open-ended agent command.
 
-- An env should define:
-  - role
-  - default platform settings
-  - enabled tool packs
-  - output publishers
-  - extra instructions
-- An env should not add one-off special logic to the command path.
-- Runtime context should come from one normalized JSON file plus CLI overrides, not from workflow-specific `process.env` scraping.
-- If a new remote workflow is needed, prefer generating the same JSON context upstream rather than adding another workflow-specific loader.
+## Core Contracts
 
-Current built-in envs:
+### Env
 
+`env` is the only preset concept.
+
+Built-in envs:
+
+- `mobile-pr`
 - `local-android`
 - `local-ios`
-- `mobile-pr`
 
-## Runtime Context
+An env sets defaults such as tool packs, publishers, and mobile defaults. It must not introduce workflow-specific runtime scraping.
 
-Use this order when changing the runtime context contract:
+### Context
 
-1. Update the normalized schema in `packages/cali/src/env/context-file.ts`.
-2. Keep CLI flags as explicit overrides for that schema.
-3. Update `packages/cali/src/env/local.ts` only if local fallback behavior changes.
-4. Update env defaults in `packages/cali/src/config/load.ts` if the role behavior changes.
-5. Update `packages/cali/README.md`.
+All commands use one shared `cali-context.json` contract.
 
-Keep the context small and explicit. It should cover:
+Keep the shared context focused on:
 
-- platform
-- artifact path
-- app id
-- build and workflow metadata
-- output directories
-- device name
-- PR or task metadata
+- `workspaceRoot`
+- `repository`
+- `task`
+- `pullRequest`
+- `mobile`
+- `build`
+- `output`
+- role-specific optional sections:
+  - `qa`
+  - `review`
+  - `perfReview`
+  - `dev`
 
-## Adding a New Role
+If a new workflow needs more data, extend the shared context schema in `packages/cali/src/runtime/context.ts` instead of adding a new workflow-specific loader.
 
-Use this order:
+### Tool Packs
 
-1. Add the role module under `packages/cali/src/roles/`.
-2. Keep bootstrap outside the role.
-3. Expose only explicit tool packs.
-4. Define one structured output contract.
-5. Document the role prompt and intended runtime in `packages/cali/README.md`.
+Built-in pack ids:
 
-Avoid role-specific branching in shared helpers when a small role module will do.
+- `skills`
+- `agent-device`
+- `repo-read`
+- `repo-write`
+- `github`
+- `react-devtools`
+- `report`
+
+Required skill guidance should be preloaded through the tool-pack registry when a pack depends on a skill workflow. Do not push that responsibility into individual prompts by hand.
+
+## Command Guidance
+
+### `qa`
+
+- Bootstrap stays outside the role in the command module.
+- The role inspects the app and writes a structured QA report.
+- Requires `agent-device` on `PATH`.
+- Mobile runs use a unique per-run `agent-device` session. Do not reuse ambient sessions.
+- Local envs are convenience-first: try `open --relaunch` before reinstalling.
+- Local mobile runs can infer the app id from the artifact. Do not require `--app-id` unless inference fails.
+- If `--device` is omitted, reuse the single booted local target when exactly one exists; otherwise fail clearly.
+- Acceptance criteria resolve in this order:
+  - `context.qa.acceptanceCriteria`
+  - `context.pullRequest.body`
+  - `context.task.body`
+  - additive CLI prompt
+
+### `review`
+
+- No code changes.
+- Findings first.
+- Prefer repository/diff evidence over generic advice.
+
+### `perf-review`
+
+- Uses both `agent-device` and `react-devtools`.
+- Requires `agent-device` and `agent-react-devtools` on `PATH`.
+- Focus on runtime evidence, not speculative optimizations.
+
+### `dev`
+
+- Smallest code change that solves the task.
+- Repository tools rely on `git`, `rg`, and `zsh` being available.
+- Respect `context.dev.writePolicy` and `context.dev.pushPolicy`.
 
 ## Validation
 
 - For `packages/cali` TypeScript changes:
   - `bunx tsc --noEmit -p packages/cali/tsconfig.json`
 - For build or runtime changes:
-  - `bun run build`
+  - `bun run build:cli`
 - For CLI surface changes:
-  - `node packages/cali/dist/index.js qa --help`
-- For env or context contract changes:
-  - run at least one env smoke command if credentials and local tooling exist
+  - `node packages/cali/dist/index.js --help`
+  - relevant `--help` command smoke tests
+- For command/runtime changes:
+  - run at least one source-mode smoke command if possible
 
 Do not commit generated `artifacts/` output.
 
 ## Handy Scripts
 
-When working in `packages/cali`, prefer the package scripts over reconstructing CLI commands:
+Built bundle:
 
-- built bundle:
-  - `bun run qa -- --help`
-  - `bun run qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
-  - `bun run qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-  - `bun run qa:env:mobile-pr -- --context ./qa-context.json`
-- source/dev loop:
-  - `bun run dev:qa -- --help`
-  - `bun run dev:qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
-  - `bun run dev:qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-  - `bun run dev:qa:env:mobile-pr -- --context ./qa-context.json`
+- `bun run qa -- --help`
+- `bun run review -- --help`
+- `bun run perf-review -- --help`
+- `bun run dev:command -- --help`
 
-## Documentation Touch Points
+Source/dev loop:
 
-When behavior changes, review:
+- `bun run dev:qa -- --help`
+- `bun run dev:review -- --help`
+- `bun run dev:perf-review -- --help`
+- `bun run dev:dev-command -- --help`
 
-- `packages/cali/README.md`
-- `README.md` if package positioning changed
-- this file if agent workflow or repo guidance changed
-- PR body if the branch story materially changed
+## Extending Cali
 
-## Agent Roadmap
+When adding a new command:
 
-These roles are good next candidates for remote environments such as CI, ephemeral sandboxes, and device-backed mobile workflows.
+1. Add the CLI command module under `packages/cali/src/cli/`.
+2. Add the orchestration module under `packages/cali/src/commands/`.
+3. Add the role module under `packages/cali/src/roles/`.
+4. Register tool packs in `packages/cali/src/runtime/tool-packs.ts`.
+5. Extend the shared report contract and renderer only as much as needed.
+6. Update `packages/cali/README.md` and this file.
 
-### `qa` (implemented)
+Prefer small, explicit contracts:
 
-Use for:
-
-- user-visible flow verification on installed builds
-- PR smoke checks in EAS or GitHub Actions
-- screenshot-backed QA summaries
-
-Prompt shape:
-
-```text
-You are a mobile QA agent for React Native and Expo builds.
-Treat bootstrap as already handled.
-Inspect the app with the provided device tools only.
-Prioritize user-visible flows and concise acceptance criteria from PR or task metadata.
-Capture screenshots for meaningful states.
-Do not inspect source code or modify the repository.
-Finish by writing one structured QA report.
-```
-
-### `dev-mobile` (planned)
-
-Use for:
-
-- sandboxed implementation tasks on React Native or Expo apps
-- targeted bug fixes with local validation
-- feature work where code inspection and editing are allowed
-
-Prompt shape:
-
-```text
-You are a React Native and Expo development agent working in a sandboxed repository.
-Start from the user task, repo scripts, and current project state.
-Inspect only the files needed to understand the issue.
-Make the smallest code change that solves the problem.
-Prefer existing scripts and project conventions over ad hoc commands.
-Validate with the lightest checks that prove the change.
-Summarize the fix, the files changed, and the exact validation run.
-```
-
-### `review-mobile-pr` (planned)
-
-Use for:
-
-- PR review in CI or a sandbox without making changes
-- regression and risk analysis for React Native or Expo code
-- architecture, platform, and maintainability review
-
-Prompt shape:
-
-```text
-You are a mobile code review agent for React Native and Expo pull requests.
-Review the diff and any attached build or QA context.
-Prioritize correctness risks, platform regressions, missing validation, and maintainability concerns.
-Do not suggest broad rewrites when a targeted concern is enough.
-Output findings first, ordered by severity, with file references and short rationale.
-If there are no concrete findings, say so explicitly and note any residual risk.
-```
-
-### `ci-debug-mobile` (planned)
-
-Use for:
-
-- failing GitHub Actions, EAS, or other remote mobile pipelines
-- broken build, install, test, or runtime automation in CI
-- diagnosis-first workflows where logs and artifacts matter more than code edits
-
-Prompt shape:
-
-```text
-You are a CI debugging agent for React Native and Expo workflows.
-Start from the failing job, logs, and environment metadata.
-Identify the first concrete failure, not downstream noise.
-Explain whether the root cause is code, configuration, environment, credentials, or infrastructure.
-If a code or config fix is safe and local, implement the smallest one.
-Otherwise, produce a short unblock plan with the exact environment inputs required.
-```
-
-### `upgrade-mobile` (planned)
-
-Use for:
-
-- React Native upgrades
-- Expo SDK upgrades
-- library compatibility sweeps in a sandbox
-
-Prompt shape:
-
-```text
-You are a React Native and Expo upgrade agent.
-Treat upgrades as compatibility work, not greenfield refactoring.
-Start from the requested target version and the current repo state.
-Apply the minimum set of changes needed to get the project building and typechecking again.
-Call out manual follow-ups separately from the automated patch.
-Validate with version-appropriate build and type checks.
-```
+- one shared context model
+- one command registry
+- one publisher pipeline
+- command-specific role prompts and output schemas
 
 ## Keep It Simple
 
-- Prefer one normalized context contract over multiple workflow-specific loaders.
-- Prefer one role file over abstract role frameworks.
-- Prefer docs that explain current behavior clearly over speculative docs for future behavior.
-- If a planned role needs a different tool surface or output contract, document it first before implementing shared abstractions.
+- Prefer one normalized context contract over workflow-specific loaders.
+- Prefer one small tool-pack addition over command-local shell wrappers.
+- Prefer one role file per command over broad abstract “agent frameworks”.
+- Prefer accurate docs for the current command surface over speculative future docs.

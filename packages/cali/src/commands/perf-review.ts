@@ -1,5 +1,5 @@
-import type { QaReport, QaReportInput, ScreenshotInfo } from '../report/types.js'
-import { runQaMobileRole } from '../roles/qa-mobile.js'
+import type { PerfReviewReport, ScreenshotInfo } from '../report/types.js'
+import { runPerfReviewRole } from '../roles/perf-review.js'
 import {
   bootstrapMobileApp,
   closeAgentDeviceSession,
@@ -22,87 +22,64 @@ import {
   summarizeReason,
 } from './shared.js'
 
-function resolveAcceptanceCriteria(
-  context: Parameters<typeof runQaMobileRole>[0]['context'],
-  prompt?: string
-) {
-  if ((context.qa?.acceptanceCriteria ?? []).length > 0) {
-    return context.qa?.acceptanceCriteria ?? []
-  }
-
-  if (context.pullRequest?.body?.trim()) {
-    return [context.pullRequest.body.trim()]
-  }
-
-  if (context.task?.body?.trim()) {
-    return [context.task.body.trim()]
-  }
-
-  if (prompt?.trim()) {
-    return [prompt.trim()]
-  }
-
-  return ['Run a lightweight mobile QA pass and report the observed result.']
-}
-
-function composeQaReport(
+function composePerfReviewReport(
   model: string,
-  context: Parameters<typeof runQaMobileRole>[0]['context'],
-  reportInput: QaReportInput,
+  context: Parameters<typeof runPerfReviewRole>[0]['context'],
+  reportInput: Awaited<ReturnType<typeof runPerfReviewRole>>['reportInput'],
   screenshots: Array<Omit<ScreenshotInfo, 'label'>>,
-  agentDeviceTrace: QaReport['agentDeviceTrace'],
-  acceptanceCriteriaUsed: string[]
-): QaReport {
-  const screenshotLabelMap = new Map(
-    (reportInput.screenshotLabels ?? [])
-      .filter((item) => item.fileName && item.label)
-      .map((item) => [item.fileName, item.label.trim()])
-  )
-
+  agentDeviceTrace: PerfReviewReport['agentDeviceTrace'],
+  reactDevtoolsTrace: PerfReviewReport['reactDevtoolsTrace']
+): PerfReviewReport {
   return {
-    command: 'qa',
+    command: 'perf-review',
     generatedAt: new Date().toISOString(),
     model,
     context,
     overallStatus: reportInput.overallStatus,
     summary: reportInput.summary,
-    checked: reportInput.checked ?? [],
-    issues: reportInput.issues ?? [],
+    scenario: reportInput.scenario ?? context.perfReview?.targetFlow ?? 'General runtime review',
+    slowComponents: reportInput.slowComponents ?? [],
+    rerenderHotspots: reportInput.rerenderHotspots ?? [],
+    suspectedCauses: reportInput.suspectedCauses ?? [],
+    evidence: reportInput.evidence ?? [],
+    recommendedFixes: reportInput.recommendedFixes ?? [],
     nextSteps: reportInput.nextSteps ?? [],
-    screenshotLabels: reportInput.screenshotLabels ?? [],
+    environmentNotes: reportInput.environmentNotes ?? [],
     screenshots: screenshots.map((screenshot) => ({
       ...screenshot,
-      label:
-        screenshotLabelMap.get(screenshot.fileName) ?? humanizeScreenshotLabel(screenshot.fileName),
+      label: humanizeScreenshotLabel(screenshot.fileName),
     })),
-    acceptanceCriteriaUsed,
-    environmentNotes: reportInput.environmentNotes ?? [],
-    agentDeviceTrace: agentDeviceTrace.slice(-20),
+    agentDeviceTrace,
+    reactDevtoolsTrace,
   }
 }
 
-function createBlockedReport(summary: string): QaReportInput {
+function createBlockedPerfReviewReport(summary: string) {
   return {
-    overallStatus: 'blocked',
+    overallStatus: 'blocked' as const,
     summary,
-    checked: ['Run a mobile QA pass'],
-    issues: [summary],
-    nextSteps: ['Inspect the bootstrap and runtime logs, then retry the QA run.'],
+    scenario: 'Blocked runtime performance review',
+    slowComponents: [],
+    rerenderHotspots: [],
+    suspectedCauses: [],
+    evidence: [],
+    recommendedFixes: [],
+    nextSteps: ['Inspect bootstrap, runtime tooling, and retry the performance review run.'],
     environmentNotes: [summary],
   }
 }
 
-export async function runQaCommand(cli: CommandCliOptions) {
-  const { cwd, config, context } = await loadRunContext('qa', cli)
-  const acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
+export async function runPerfReviewCommand(cli: CommandCliOptions) {
+  const { cwd, config, context } = await loadRunContext('perf-review', cli)
 
-  let reportInput: QaReportInput
-  let agentDeviceTrace: QaReport['agentDeviceTrace'] = []
+  let reportInput: Awaited<ReturnType<typeof runPerfReviewRole>>['reportInput']
+  let agentDeviceTrace: PerfReviewReport['agentDeviceTrace'] = []
+  let reactDevtoolsTrace: PerfReviewReport['reactDevtoolsTrace'] = []
   let mobileContext: Awaited<ReturnType<typeof resolveMobileRuntimeContext>> | undefined
   let sessionName: string | undefined
 
   try {
-    mobileContext = await resolveMobileRuntimeContext('qa', config.envName, context)
+    mobileContext = await resolveMobileRuntimeContext('perf-review', config.envName, context)
     sessionName = createAgentDeviceSessionName(mobileContext.platform)
 
     printPhase(
@@ -110,9 +87,8 @@ export async function runQaCommand(cli: CommandCliOptions) {
       `${mobileContext.platform} | ${mobileContext.deviceName ?? 'bound device'} | ${mobileContext.appId}`
     )
     await prepareMobileOutputDirectories(mobileContext)
-
     printPhase('Bootstrapping app', mobileContext.artifactPath)
-    await bootstrapMobileApp('qa', config.envName, mobileContext, sessionName)
+    await bootstrapMobileApp('perf-review', config.envName, mobileContext, sessionName)
     printPhase('Bootstrap complete')
 
     printPhase('Preparing tool packs', config.enabledToolPacks.join(', '))
@@ -123,33 +99,33 @@ export async function runQaCommand(cli: CommandCliOptions) {
       sessionName,
     })
 
-    printPhase('Running QA agent', config.model)
-    const roleResult = await runQaMobileRole({
+    printPhase('Running perf-review agent', config.model)
+    const roleResult = await runPerfReviewRole({
       context,
       modelId: config.model,
       tools: {
         ...preparedToolPacks.tools,
-        get_run_context: createRunContextTool('qa', context),
+        get_run_context: createRunContextTool('perf-review', context),
       },
       availableSkillsPrompt: preparedToolPacks.availableSkillsPrompt,
       preloadedSkillsPrompt: preparedToolPacks.preloadedSkillsPrompt,
       extraInstructions: config.extraInstructions,
       prompt: cli.prompt,
-      acceptanceCriteriaUsed,
       onAgentStep: (event) => {
-        printPhase('QA agent step complete', formatAgentStepDetail(event))
+        printPhase('Perf-review step complete', formatAgentStepDetail(event))
       },
       onAgentFinish: (event) => {
-        printPhase('QA agent finished', formatAgentFinishDetail(event))
+        printPhase('Perf-review agent finished', formatAgentFinishDetail(event))
       },
     })
 
     reportInput = roleResult.reportInput
     agentDeviceTrace = preparedToolPacks.traces.agentDeviceTrace
+    reactDevtoolsTrace = preparedToolPacks.traces.reactDevtoolsTrace
   } catch (unknownError) {
     const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
     printPhase('Run blocked', summarizeReason(error.message))
-    reportInput = createBlockedReport(error.message)
+    reportInput = createBlockedPerfReviewReport(error.message)
   } finally {
     if (sessionName) {
       await closeAgentDeviceSession(sessionName)
@@ -157,13 +133,13 @@ export async function runQaCommand(cli: CommandCliOptions) {
   }
 
   const screenshots = mobileContext ? await listScreenshots(mobileContext.screenshotsDir) : []
-  const report = composeQaReport(
+  const report = composePerfReviewReport(
     config.model,
     context,
     reportInput,
     screenshots,
     agentDeviceTrace,
-    acceptanceCriteriaUsed
+    reactDevtoolsTrace
   )
   printPhase('Publishing report', config.outputPublishers.join(', '))
   const publishedReport = await publishReport({
@@ -171,5 +147,5 @@ export async function runQaCommand(cli: CommandCliOptions) {
     publishers: config.outputPublishers,
   })
 
-  printFinalReport(cwd, 'qa', 'QA report', publishedReport)
+  printFinalReport(cwd, 'perf-review', 'Perf-review report', publishedReport)
 }

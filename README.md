@@ -26,11 +26,11 @@ Thanks to that, an LLM can help you with your React Native app development, with
 
 You can use Cali in three ways:
 
-- **standalone** - [`cali`](./packages/cali/README.md) - QA-oriented CLI for mobile app review runs in local and CI environments.
+- **standalone** - [`cali`](./packages/cali/README.md) - Role-oriented CLI for mobile QA, review, perf review, and dev runs in local and CI environments.
 - **with Vercel AI SDK** - [`cali-tools`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
 - **with Claude, Zed, and other MCP Clients** - [`cali-mcp-server`](./packages/mcp-server/README.md) - [MCP server](http://modelcontextprotocol.io) for using Cali with Claude and other compatible environments
 
-For a repo-oriented guide to the current Cali v2 architecture and planned mobile-agent roles, see [`AGENTS.md`](./AGENTS.md).
+For a repo-oriented guide to the current Cali v2 architecture, role platform, and extension points, see [`AGENTS.md`](./AGENTS.md).
 For the standalone CLI’s current env model, context file contract, and package scripts, see [`packages/cali/README.md`](./packages/cali/README.md).
 
 ## What can it do?
