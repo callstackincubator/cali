@@ -1,28 +1,28 @@
 import { z } from 'zod'
 
-export const QaPresetNameSchema = z.enum([
-  'eas-mobile-pr',
-  'github-actions-pr',
-  'local-android',
-  'local-ios',
-])
-export const EnvironmentAdapterNameSchema = z.enum([
-  'eas-env',
-  'github-actions-env',
-  'local-flags',
-  'json-file',
-])
-export const ToolPackNameSchema = z.enum(['skills', 'agent-device'])
-export const PublisherNameSchema = z.enum(['file', 'blob'])
+const QaEnvNameSchema = z.enum(['mobile-pr', 'local-android', 'local-ios'])
+const ToolPackNameSchema = z.enum(['skills', 'agent-device'])
+const PublisherNameSchema = z.enum(['file', 'blob'])
 const QaPlatformSchema = z.enum(['android', 'ios'])
 
 const StringArraySchema = z.union([z.string(), z.array(z.string())]).optional()
 
+export function normalizeQaEnvName(value?: string): QaEnvName | undefined {
+  switch (value) {
+    case 'mobile-pr':
+    case 'local-android':
+    case 'local-ios':
+      return value
+    default:
+      return undefined
+  }
+}
+
 export const CaliQaConfigSchema = z.object({
   role: z.literal('qa').optional(),
-  preset: QaPresetNameSchema.optional(),
-  environmentAdapter: EnvironmentAdapterNameSchema.optional(),
+  env: QaEnvNameSchema.optional(),
   appId: z.string().optional(),
+  contextPath: z.string().optional(),
   platformDefaults: z
     .object({
       platform: QaPlatformSchema.optional(),
@@ -37,8 +37,7 @@ export const CaliQaConfigSchema = z.object({
   model: z.string().optional(),
 })
 
-export type QaPresetName = z.infer<typeof QaPresetNameSchema>
-export type EnvironmentAdapterName = z.infer<typeof EnvironmentAdapterNameSchema>
+export type QaEnvName = z.infer<typeof QaEnvNameSchema>
 export type ToolPackName = z.infer<typeof ToolPackNameSchema>
 export type PublisherName = z.infer<typeof PublisherNameSchema>
 export type CaliQaConfig = z.infer<typeof CaliQaConfigSchema>

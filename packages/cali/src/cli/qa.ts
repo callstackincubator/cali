@@ -5,10 +5,10 @@ import type { QaCliOptions } from '../env/types.js'
 import { normalizePlatform } from '../utils.js'
 
 type QaCommandOptions = {
-  preset?: string
+  env?: string
   config?: string
   prompt?: string
-  json?: string
+  context?: string
   platform?: string
   artifact?: string
   appId?: string
@@ -51,10 +51,10 @@ function normalizeQaCliOptions(options: QaCommandOptions): QaCliOptions {
   }
 
   return {
-    presetName: readOptionalString(options.preset) as QaCliOptions['presetName'],
+    envName: readOptionalString(options.env) as QaCliOptions['envName'],
     configPath: readOptionalString(options.config),
     prompt: readOptionalString(options.prompt),
-    jsonPath: readOptionalString(options.json),
+    contextPath: readOptionalString(options.context),
     platform,
     artifactPath: readOptionalString(options.artifact),
     appId: readOptionalString(options.appId),
@@ -75,13 +75,10 @@ function normalizeQaCliOptions(options: QaCommandOptions): QaCliOptions {
 export function registerQaCommand(cli: ReturnType<typeof cac>, printBanner: () => void) {
   cli
     .command('qa', 'Run the mobile QA role')
-    .option(
-      '--preset <name>',
-      'Built-in preset: eas-mobile-pr, github-actions-pr, local-android, local-ios'
-    )
+    .option('--env <name>', 'Built-in env: mobile-pr, local-android, local-ios')
     .option('--config <path>', 'Path to cali.config.ts')
     .option('--prompt <text>', 'Add task-specific QA intent')
-    .option('--json <path>', 'Load normalized environment context from JSON')
+    .option('--context <path>', 'Load normalized QA context from JSON')
     .option('--platform <name>', 'android or ios')
     .option('--artifact <path>', 'App artifact path (.apk, .aab, .app, .ipa)')
     .option('--app-id <id>', 'Application identifier / package name')
@@ -97,7 +94,7 @@ export function registerQaCommand(cli: ReturnType<typeof cac>, printBanner: () =
     .option('--task-body <text>', 'Task body')
     .option('--model <id>', 'Override the QA model')
     .example(
-      'qa --preset local-ios --artifact ./artifacts/MyApp.app --app-id com.example.myapp --prompt "verify the onboarding copy on Screen B"'
+      'qa --env local-ios --artifact ./artifacts/MyApp.app --app-id com.example.myapp --prompt "verify the onboarding copy on Screen B"'
     )
     .action(async (options) => {
       printBanner()

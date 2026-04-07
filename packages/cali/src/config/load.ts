@@ -7,13 +7,13 @@ import { cosmiconfig } from 'cosmiconfig'
 import type { QaResolvedConfig } from '../env/types.js'
 import { resolveQaModelId } from '../model.js'
 import { asArray, resolveFromCwd, uniqueStrings } from '../utils.js'
-import type { CaliQaConfig, PublisherName, QaPresetName, ToolPackName } from './schema.js'
-import { CaliQaConfigSchema } from './schema.js'
+import type { CaliQaConfig, PublisherName, QaEnvName, ToolPackName } from './schema.js'
+import { CaliQaConfigSchema, normalizeQaEnvName } from './schema.js'
 
 type LoadQaConfigOptions = {
   cwd: string
   configPath?: string
-  presetName?: QaPresetName
+  envName?: QaEnvName
   model?: string
 }
 
@@ -21,20 +21,7 @@ function getBuiltInSkillPaths(cwd: string) {
   return [path.join(cwd, '.agents', 'skills'), path.join(homedir(), '.agents', 'skills')]
 }
 
-function getDefaultEnvironmentAdapter(presetName: QaPresetName) {
-  switch (presetName) {
-    case 'eas-mobile-pr':
-      return 'eas-env' as const
-    case 'github-actions-pr':
-      return 'github-actions-env' as const
-    case 'local-ios':
-    case 'local-android':
-    default:
-      return 'local-flags' as const
-  }
-}
-
-function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
+function getEnvConfig(cwd: string, envName: QaEnvName): CaliQaConfig {
   const enabledToolPacks: ToolPackName[] = ['skills', 'agent-device']
   const outputPublishers: PublisherName[] = ['blob', 'file']
   const common = {
@@ -44,32 +31,20 @@ function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
     outputPublishers,
   }
 
-  switch (presetName) {
-    case 'eas-mobile-pr':
+  switch (envName) {
+    case 'mobile-pr':
       return {
         ...common,
-        preset: presetName,
-        environmentAdapter: 'eas-env',
+        env: envName,
         extraInstructions: [
-          'Infer concise acceptance criteria from PR metadata and prioritize user-visible flows.',
-          'Treat the repository as a black box and avoid source inspection unless the config explicitly says otherwise.',
-        ],
-      }
-    case 'github-actions-pr':
-      return {
-        ...common,
-        preset: presetName,
-        environmentAdapter: 'github-actions-env',
-        extraInstructions: [
-          'Infer concise acceptance criteria from GitHub pull request metadata and prioritize user-visible flows.',
+          'Infer concise acceptance criteria from pull request or task metadata and prioritize user-visible flows.',
           'Treat the repository as a black box and avoid source inspection unless the config explicitly says otherwise.',
         ],
       }
     case 'local-ios':
       return {
         ...common,
-        preset: presetName,
-        environmentAdapter: 'local-flags',
+        env: envName,
         platformDefaults: {
           platform: 'ios',
         },
@@ -81,8 +56,7 @@ function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
     default:
       return {
         ...common,
-        preset: presetName,
-        environmentAdapter: 'local-flags',
+        env: envName,
         platformDefaults: {
           platform: 'android',
         },
@@ -96,9 +70,9 @@ function getPresetConfig(cwd: string, presetName: QaPresetName): CaliQaConfig {
 function mergeConfig(base: CaliQaConfig, override: CaliQaConfig): CaliQaConfig {
   return {
     role: override.role ?? base.role ?? 'qa',
-    preset: override.preset ?? base.preset,
-    environmentAdapter: override.environmentAdapter ?? base.environmentAdapter,
+    env: override.env ?? base.env,
     appId: override.appId ?? base.appId,
+    contextPath: override.contextPath ?? base.contextPath,
     platformDefaults: {
       ...base.platformDefaults,
       ...override.platformDefaults,
@@ -140,15 +114,16 @@ async function loadConfigFile(cwd: string, explicitPath?: string): Promise<CaliQ
 }
 
 export async function loadQaConfig(options: LoadQaConfigOptions): Promise<QaResolvedConfig> {
-  const { cwd, configPath, presetName: cliPresetName, model } = options
+  const { cwd, configPath, envName: cliEnvName, model } = options
   const fileConfig = await loadConfigFile(cwd, configPath)
-  const presetName = cliPresetName ?? fileConfig.preset ?? 'local-android'
-  const presetConfig = getPresetConfig(cwd, presetName)
-  const merged = mergeConfig(presetConfig, fileConfig)
+  const envName = cliEnvName ?? normalizeQaEnvName(fileConfig.env) ?? 'local-android'
+  const envConfig = getEnvConfig(cwd, envName)
+  const merged = mergeConfig(envConfig, fileConfig)
 
   return {
-    environmentAdapter: merged.environmentAdapter ?? getDefaultEnvironmentAdapter(presetName),
+    envName,
     appId: merged.appId,
+    contextPath: merged.contextPath ? resolveFromCwd(cwd, merged.contextPath) : undefined,
     platformDefaults: merged.platformDefaults ?? {},
     outputDir: merged.outputDir,
     skillPaths: uniqueStrings(merged.skillPaths ?? []),

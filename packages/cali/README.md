@@ -5,52 +5,60 @@ Cali v2 is a QA-oriented CLI for mobile app review runs. Today it ships `cali qa
 ## Current scope
 
 - `cali qa`
-- presets: `eas-mobile-pr`, `github-actions-pr`, `local-android`, `local-ios`
-- environment adapters: EAS env, GitHub Actions env, local flags, JSON context
+- envs: `mobile-pr`, `local-android`, `local-ios`
+- runtime context: one JSON context file plus CLI flag overrides
 - tool packs: `skills`, `agent-device`
 - publishers: `blob`, `file`
 - additive `--prompt`
 
-The surface is intentionally role-based today. Interactive follow-up flows can be added later without changing the preset, adapter, or publisher model.
+The surface is intentionally role-based today. Interactive follow-up flows can be added later without changing the env, context, or publisher model.
 
 ## Core Concepts
 
-- preset: bundles a role with default platform settings, an environment adapter, skill paths, enabled tool packs, and publishers
-- environment adapter: resolves the normalized runtime context for a run, including platform, artifact path, app id, build metadata, and output directories
+- env: bundles a role with default platform settings, skill paths, enabled tool packs, publishers, and default instructions
+- context file: the explicit JSON input that defines the normalized runtime context for a run, including platform, artifact path, app id, build metadata, and output directories
 - tool pack: the explicit set of tools exposed to the role, such as `skills` metadata access or `agent-device` UI automation
 - publisher: decides how the QA report is exposed after the run, such as writing files locally or uploading blobs
 
 ## Examples
 
-### Local preset
+### Local env
 
-For local presets, `--artifact` is required and `appId` must come from `--app-id`, `config.appId`, or `APPLICATION_ID`. Cali does not infer it from `app.json` yet. `--device` is optional.
+For local envs, `--artifact` is required and `appId` must come from `--app-id` or `config.appId`. Cali does not infer it from `app.json` yet. `--device` is optional.
 
 ```bash
 cali qa \
-  --preset local-ios \
+  --env local-ios \
   --artifact ./artifacts/MyApp.app \
   --app-id com.example.myapp \
   --prompt "verify the onboarding copy on Screen B"
 ```
 
-### EAS preset
+### Remote env with a context file
 
-For `eas-mobile-pr`, you usually do not pass `--artifact` or `--app-id` on the command line. The EAS adapter reads them from `APP_PATH` and `APPLICATION_ID`, and it reads the platform from `QA_PLATFORM` unless you override it with `--platform`.
+For remote environments such as GitHub Actions, EAS workflows, or custom sandboxes, write one normalized JSON context file and override fields only when needed. `mobile-pr` expects that file.
 
-```bash
-cali qa --preset eas-mobile-pr
+```json
+{
+  "platform": "android",
+  "artifactPath": "./artifacts/app.apk",
+  "appId": "com.example.myapp",
+  "buildId": "gha-run-123",
+  "workflowUrl": "https://github.com/acme/mobile/actions/runs/123",
+  "metadata": {
+    "prNumber": 42,
+    "prTitle": "Fix onboarding CTA",
+    "prLabels": ["mobile", "qa"],
+    "isDraft": false
+  }
+}
 ```
 
-### GitHub Actions preset
-
-For `github-actions-pr`, you usually do not pass `--artifact` or `--app-id` on the command line. The adapter reads the artifact from `APP_PATH` or `QA_ARTIFACT_PATH`, reads the app id from `APPLICATION_ID`, derives the workflow URL from GitHub Actions environment variables, and reads pull request metadata from `GITHUB_EVENT_PATH`.
-
 ```bash
-cali qa --preset github-actions-pr
+cali qa --env mobile-pr --context ./qa-context.json
 ```
 
-The GitHub Actions and EAS presets both require `QA_PLATFORM` unless you override it with `--platform`.
+Flags always win over the context file. For example, `--platform ios` or `--output-dir ./artifacts/custom` overrides the JSON value.
 
 ## Credentials
 
@@ -61,9 +69,7 @@ The GitHub Actions and EAS presets both require `QA_PLATFORM` unless you overrid
 - Anthropic direct: `ANTHROPIC_API_KEY`
 - Anthropic alias: `CLAUDE_API_KEY`
 
-Cali defaults to `openai/gpt-5.4-mini`.
-If gateway credentials are present, that model is routed through AI Gateway.
-Direct provider support in this package is Anthropic only.
+Cali defaults to `openai/gpt-5.4-mini`. If gateway credentials are present, that model is routed through AI Gateway. Direct provider support in this package is Anthropic only.
 
 ## Config
 
@@ -72,7 +78,8 @@ Create `cali.config.ts` in the project root:
 ```ts
 export default {
   role: 'qa',
-  preset: 'local-android',
+  env: 'local-android',
+  contextPath: './qa-context.json',
   extraInstructions: ['Prioritize auth and onboarding flows.'],
 }
 ```
@@ -84,24 +91,19 @@ By default, Cali discovers skills from:
 
 ## Package Scripts
 
-The `cali` package exposes handy scripts for the currently implemented `qa` role.
-Pass additional CLI flags after `--`.
+The `cali` package exposes handy scripts for the currently implemented `qa` role. Pass additional CLI flags after `--`.
 
 - `bun run qa -- --help`
-- `bun run qa:local:android -- --artifact ./app.apk --app-id com.example.app`
-- `bun run qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-- `bun run qa:eas`
-- `bun run qa:gha`
-- `bun run qa:json -- ./qa-context.json`
+- `bun run qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
+- `bun run qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+- `bun run qa:env:mobile-pr -- --context ./qa-context.json`
 
 For development against source instead of the built bundle:
 
 - `bun run dev:qa -- --help`
-- `bun run dev:qa:local:android -- --artifact ./app.apk --app-id com.example.app`
-- `bun run dev:qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-- `bun run dev:qa:eas`
-- `bun run dev:qa:gha`
-- `bun run dev:qa:json -- ./qa-context.json`
+- `bun run dev:qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
+- `bun run dev:qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+- `bun run dev:qa:env:mobile-pr -- --context ./qa-context.json`
 
 ## Installing Skills
 
@@ -117,7 +119,7 @@ Project-local and home-directory skills are both picked up automatically by `cal
 
 ## Repo Guide
 
-For implementation details, preset guidance, and the roadmap for additional Cali roles in CI or sandbox environments, see [`AGENTS.md`](../../AGENTS.md).
+For implementation details, env guidance, and the roadmap for additional Cali roles in CI or sandbox environments, see [`AGENTS.md`](../../AGENTS.md).
 
 ## Outputs
 

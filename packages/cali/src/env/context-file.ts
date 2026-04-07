@@ -4,10 +4,9 @@ import path from 'node:path'
 import { z } from 'zod'
 
 import { resolveFromCwd } from '../utils.js'
-import type { QaCliOptions, QaRuntimeContext } from './types.js'
-import type { QaResolvedConfig } from './types.js'
+import type { QaCliOptions, QaResolvedConfig, QaRuntimeContext } from './types.js'
 
-const JsonMetadataSchema = z
+const ContextMetadataSchema = z
   .object({
     prNumber: z.number().optional(),
     prTitle: z.string().optional(),
@@ -20,7 +19,7 @@ const JsonMetadataSchema = z
   })
   .optional()
 
-const JsonContextSchema = z.object({
+const QaContextFileSchema = z.object({
   platform: z.enum(['android', 'ios']),
   artifactPath: z.string(),
   appId: z.string().optional(),
@@ -28,22 +27,23 @@ const JsonContextSchema = z.object({
   workflowUrl: z.string().optional(),
   outputDir: z.string().optional(),
   deviceName: z.string().optional(),
-  metadata: JsonMetadataSchema,
+  metadata: ContextMetadataSchema,
 })
 
-export async function fromJsonFile(
+export async function fromContextFile(
   cwd: string,
   config: QaResolvedConfig,
   cli: QaCliOptions
 ): Promise<QaRuntimeContext> {
-  if (!cli.jsonPath) {
-    throw new Error('JSON adapter requires --json.')
+  const contextPath = cli.contextPath ?? config.contextPath
+
+  if (!contextPath) {
+    throw new Error('Context file mode requires --context or config.contextPath.')
   }
 
-  const absolutePath = resolveFromCwd(cwd, cli.jsonPath)
+  const absolutePath = resolveFromCwd(cwd, contextPath)
   const content = await readFile(absolutePath, 'utf8')
-  const parsed = JsonContextSchema.parse(JSON.parse(content))
-
+  const parsed = QaContextFileSchema.parse(JSON.parse(content))
   const outputDir = resolveFromCwd(
     cwd,
     cli.outputDir ?? parsed.outputDir ?? config.outputDir ?? path.join('artifacts', 'qa')
@@ -51,14 +51,14 @@ export async function fromJsonFile(
   const appId = cli.appId ?? config.appId ?? parsed.appId
 
   if (!appId) {
-    throw new Error('JSON adapter requires `appId` in the JSON file, config, or --app-id.')
+    throw new Error('Context file requires `appId` in the JSON file, config, or --app-id.')
   }
 
   return {
     platform: cli.platform ?? parsed.platform,
     artifactPath: resolveFromCwd(cwd, cli.artifactPath ?? parsed.artifactPath),
     appId,
-    buildId: cli.buildId ?? parsed.buildId ?? 'json-build',
+    buildId: cli.buildId ?? parsed.buildId ?? 'context-build',
     workflowUrl: cli.workflowUrl ?? parsed.workflowUrl ?? '',
     outputDir,
     screenshotsDir: path.join(outputDir, 'screenshots'),

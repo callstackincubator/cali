@@ -2,9 +2,7 @@ import { readdir, rm, stat } from 'node:fs/promises'
 import path from 'node:path'
 
 import { loadQaConfig } from '../config/load.js'
-import { fromEasEnv } from '../env/eas.js'
-import { fromGitHubActionsEnv } from '../env/github-actions.js'
-import { fromJsonFile } from '../env/json-file.js'
+import { fromContextFile } from '../env/context-file.js'
 import { fromLocalFlags } from '../env/local.js'
 import type { QaCliOptions, QaRuntimeContext } from '../env/types.js'
 import { publishBlobReport } from '../report/publishers/blob.js'
@@ -68,31 +66,14 @@ async function resolveEnvironmentContext(
   const config = await loadQaConfig({
     cwd,
     configPath: cli.configPath,
-    presetName: cli.presetName,
+    envName: cli.envName,
     model: cli.model,
   })
 
-  if (cli.jsonPath || config.environmentAdapter === 'json-file') {
-    return {
-      config: {
-        ...config,
-        environmentAdapter: 'json-file',
-      },
-      context: await fromJsonFile(cwd, config, cli),
-    }
-  }
-
-  if (config.environmentAdapter === 'eas-env') {
+  if (cli.contextPath || config.contextPath || config.envName === 'mobile-pr') {
     return {
       config,
-      context: await fromEasEnv(cwd, config, cli),
-    }
-  }
-
-  if (config.environmentAdapter === 'github-actions-env') {
-    return {
-      config,
-      context: await fromGitHubActionsEnv(cwd, config, cli),
+      context: await fromContextFile(cwd, config, cli),
     }
   }
 

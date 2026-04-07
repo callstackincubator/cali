@@ -8,7 +8,7 @@ Minimal operating guide for AI coding agents in this repo.
   - Info-only: do not edit code or run checks unless needed.
   - Code change: make the smallest scoped edit and run the lightest relevant validation.
 - Read at most 3 files first:
-  - the owning command, role, or env adapter
+  - the owning command, role, or context loader
   - one shared config or helper file
   - one relevant doc file if the task changes CLI behavior
 - Define concrete success criteria before editing.
@@ -30,14 +30,12 @@ The `cali` package is role-oriented.
   - `packages/cali/src/cli/qa.ts`
 - Runtime orchestration:
   - `packages/cali/src/commands/qa.ts`
-- Config and presets:
+- Config and env defaults:
   - `packages/cali/src/config/schema.ts`
   - `packages/cali/src/config/load.ts`
-- Environment adapters:
+- Runtime context loaders:
   - `packages/cali/src/env/local.ts`
-  - `packages/cali/src/env/eas.ts`
-  - `packages/cali/src/env/github-actions.ts`
-  - `packages/cali/src/env/json-file.ts`
+  - `packages/cali/src/env/context-file.ts`
 - Role implementation:
   - `packages/cali/src/roles/qa-mobile.ts`
 - Tool packs:
@@ -59,38 +57,37 @@ The `cali` package is role-oriented.
   - reports are written through the standard QA report schema
   - publishers decide how outputs are exposed
 
-## Preset Model
+## Env Model
 
-Presets should stay thin.
+Envs should stay thin.
 
-- A preset should define:
+- An env should define:
   - role
-  - environment adapter
   - default platform settings
   - enabled tool packs
   - output publishers
   - extra instructions
-- A preset should not add one-off special logic to the command path.
-- If a new remote environment is needed, prefer a new env adapter over branching inside `qa.ts`.
+- An env should not add one-off special logic to the command path.
+- Runtime context should come from one normalized JSON file plus CLI overrides, not from workflow-specific `process.env` scraping.
+- If a new remote workflow is needed, prefer generating the same JSON context upstream rather than adding another workflow-specific loader.
 
-Current built-in presets:
+Current built-in envs:
 
 - `local-android`
 - `local-ios`
-- `eas-mobile-pr`
-- `github-actions-pr`
+- `mobile-pr`
 
-## Adding a New Environment Adapter
+## Runtime Context
 
-Use this order:
+Use this order when changing the runtime context contract:
 
-1. Add the adapter name to `packages/cali/src/config/schema.ts`.
-2. Implement `packages/cali/src/env/<name>.ts`.
-3. Route it in `packages/cali/src/commands/qa.ts`.
-4. Add a preset in `packages/cali/src/config/load.ts`.
+1. Update the normalized schema in `packages/cali/src/env/context-file.ts`.
+2. Keep CLI flags as explicit overrides for that schema.
+3. Update `packages/cali/src/env/local.ts` only if local fallback behavior changes.
+4. Update env defaults in `packages/cali/src/config/load.ts` if the role behavior changes.
 5. Update `packages/cali/README.md`.
 
-Keep adapters small. They should only normalize context:
+Keep the context small and explicit. It should cover:
 
 - platform
 - artifact path
@@ -120,8 +117,8 @@ Avoid role-specific branching in shared helpers when a small role module will do
   - `bun run build`
 - For CLI surface changes:
   - `node packages/cali/dist/index.js qa --help`
-- For env adapter or preset changes:
-  - run at least one preset smoke command if credentials and local tooling exist
+- For env or context contract changes:
+  - run at least one env smoke command if credentials and local tooling exist
 
 Do not commit generated `artifacts/` output.
 
@@ -131,18 +128,14 @@ When working in `packages/cali`, prefer the package scripts over reconstructing 
 
 - built bundle:
   - `bun run qa -- --help`
-  - `bun run qa:local:android -- --artifact ./app.apk --app-id com.example.app`
-  - `bun run qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-  - `bun run qa:eas`
-  - `bun run qa:gha`
-  - `bun run qa:json -- ./qa-context.json`
+  - `bun run qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
+  - `bun run qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+  - `bun run qa:env:mobile-pr -- --context ./qa-context.json`
 - source/dev loop:
   - `bun run dev:qa -- --help`
-  - `bun run dev:qa:local:android -- --artifact ./app.apk --app-id com.example.app`
-  - `bun run dev:qa:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
-  - `bun run dev:qa:eas`
-  - `bun run dev:qa:gha`
-  - `bun run dev:qa:json -- ./qa-context.json`
+  - `bun run dev:qa:env:local:android -- --artifact ./app.apk --app-id com.example.app`
+  - `bun run dev:qa:env:local:ios -- --artifact ./MyApp.app --app-id com.example.app`
+  - `bun run dev:qa:env:mobile-pr -- --context ./qa-context.json`
 
 ## Documentation Touch Points
 
@@ -256,7 +249,7 @@ Validate with version-appropriate build and type checks.
 
 ## Keep It Simple
 
-- Prefer one small adapter over branching logic inside the command.
+- Prefer one normalized context contract over multiple workflow-specific loaders.
 - Prefer one role file over abstract role frameworks.
 - Prefer docs that explain current behavior clearly over speculative docs for future behavior.
 - If a planned role needs a different tool surface or output contract, document it first before implementing shared abstractions.

@@ -10,19 +10,19 @@ export async function fromLocalFlags(
   cli: QaCliOptions
 ): Promise<QaRuntimeContext> {
   const platform = cli.platform ?? config.platformDefaults.platform
-  const artifactPath = cli.artifactPath ?? process.env.APP_PATH
-  const appId = cli.appId ?? config.appId ?? process.env.APPLICATION_ID
+  const artifactPath = cli.artifactPath
+  const appId = cli.appId ?? config.appId
 
   if (!platform) {
-    throw new Error('Local adapter requires --platform or a preset platform default.')
+    throw new Error('Local env requires --platform or an env default platform.')
   }
 
   if (!artifactPath) {
-    throw new Error('Local adapter requires --artifact.')
+    throw new Error('Local env requires --artifact unless you provide a context file.')
   }
 
   if (!appId) {
-    throw new Error('Local adapter requires --app-id or config.appId.')
+    throw new Error('Local env requires --app-id or config.appId.')
   }
 
   const outputDir = resolveFromCwd(

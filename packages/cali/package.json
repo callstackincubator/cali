@@ -9,17 +9,13 @@
     "dev": "node --import=tsx ./src/cli.ts",
     "start": "node ./dist/index.js",
     "qa": "node ./dist/index.js qa",
-    "qa:eas": "node ./dist/index.js qa --preset eas-mobile-pr",
-    "qa:gha": "node ./dist/index.js qa --preset github-actions-pr",
-    "qa:json": "node ./dist/index.js qa --json",
-    "qa:local:android": "node ./dist/index.js qa --preset local-android",
-    "qa:local:ios": "node ./dist/index.js qa --preset local-ios",
+    "qa:env:local:android": "node ./dist/index.js qa --env local-android",
+    "qa:env:local:ios": "node ./dist/index.js qa --env local-ios",
+    "qa:env:mobile-pr": "node ./dist/index.js qa --env mobile-pr",
     "dev:qa": "node --import=tsx ./src/cli.ts qa",
-    "dev:qa:eas": "node --import=tsx ./src/cli.ts qa --preset eas-mobile-pr",
-    "dev:qa:gha": "node --import=tsx ./src/cli.ts qa --preset github-actions-pr",
-    "dev:qa:json": "node --import=tsx ./src/cli.ts qa --json",
-    "dev:qa:local:android": "node --import=tsx ./src/cli.ts qa --preset local-android",
-    "dev:qa:local:ios": "node --import=tsx ./src/cli.ts qa --preset local-ios"
+    "dev:qa:env:local:android": "node --import=tsx ./src/cli.ts qa --env local-android",
+    "dev:qa:env:local:ios": "node --import=tsx ./src/cli.ts qa --env local-ios",
+    "dev:qa:env:mobile-pr": "node --import=tsx ./src/cli.ts qa --env mobile-pr"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",
