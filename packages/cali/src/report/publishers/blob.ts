@@ -2,20 +2,45 @@ import { readFile } from 'node:fs/promises'
 
 import { put } from '@vercel/blob'
 
-import type { CommandReport, PerfReviewReport, QaReport } from '../types.js'
+import type { CommandReport, PerfReviewReport, QaReport, ReportPublisherResult } from '../types.js'
 
 type BlobPublishOptions = {
   report: CommandReport
+}
+
+type BlobPublishResult = {
+  report: CommandReport
+  publisherResult: ReportPublisherResult
 }
 
 function hasScreenshots(report: CommandReport): report is QaReport | PerfReviewReport {
   return 'screenshots' in report
 }
 
-export async function publishBlobReport({ report }: BlobPublishOptions): Promise<CommandReport> {
+export async function publishBlobReport({
+  report,
+}: BlobPublishOptions): Promise<BlobPublishResult> {
   const token = process.env.BLOB_READ_WRITE_TOKEN
-  if (!token || !hasScreenshots(report) || report.screenshots.length === 0) {
-    return report
+  if (!token) {
+    return {
+      report,
+      publisherResult: {
+        publisher: 'blob',
+        status: 'skipped',
+        detail: 'BLOB_READ_WRITE_TOKEN is not set.',
+      },
+    }
+  }
+
+  if (!hasScreenshots(report) || report.screenshots.length === 0) {
+    return {
+      report,
+      publisherResult: {
+        publisher: 'blob',
+        status: 'skipped',
+        detail: 'No screenshots were recorded for this report.',
+      },
+    }
   }
 
   const screenshots = await Promise.all(
@@ -54,8 +79,31 @@ export async function publishBlobReport({ report }: BlobPublishOptions): Promise
     })
   )
 
+  const failedUploads = screenshots.filter((screenshot) => Boolean(screenshot.uploadError))
+  const publisherResult: ReportPublisherResult =
+    failedUploads.length === screenshots.length
+      ? {
+          publisher: 'blob',
+          status: 'failed',
+          detail: 'Blob uploads failed for every screenshot.',
+        }
+      : failedUploads.length > 0
+        ? {
+            publisher: 'blob',
+            status: 'ok',
+            detail: `Uploaded ${screenshots.length - failedUploads.length}/${screenshots.length} screenshots.`,
+          }
+        : {
+            publisher: 'blob',
+            status: 'ok',
+            detail: `Uploaded ${screenshots.length} screenshot${screenshots.length === 1 ? '' : 's'}.`,
+          }
+
   return {
-    ...report,
-    screenshots,
-  } satisfies CommandReport
+    report: {
+      ...report,
+      screenshots,
+    } satisfies CommandReport,
+    publisherResult,
+  }
 }

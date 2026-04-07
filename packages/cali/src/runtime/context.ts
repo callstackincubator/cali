@@ -68,7 +68,6 @@ function mergeContext(
       ...override.output,
     },
     qa: override.qa ?? base.qa,
-    review: override.review ?? base.review,
     perfReview: override.perfReview ?? base.perfReview,
     dev: override.dev ?? base.dev,
   }
@@ -174,22 +173,30 @@ function applyDefaults(
       : context.mobile,
     build: context.build,
     output,
-    qa: {
-      acceptanceCriteria: context.qa?.acceptanceCriteria ?? [],
-    },
-    review: context.review ?? {},
-    perfReview: {
-      profilingGoals: context.perfReview?.profilingGoals ?? [],
-      suspectedScreens: context.perfReview?.suspectedScreens ?? [],
-      targetFlow: context.perfReview?.targetFlow,
-      expectedInteraction: context.perfReview?.expectedInteraction,
-    },
-    dev: {
-      allowedValidations: context.dev?.allowedValidations ?? [],
-      branchStrategy: context.dev?.branchStrategy,
-      writePolicy: context.dev?.writePolicy ?? 'workspace',
-      pushPolicy: context.dev?.pushPolicy ?? 'disabled',
-    },
+    qa:
+      commandId === 'qa'
+        ? {
+            acceptanceCriteria: context.qa?.acceptanceCriteria ?? [],
+          }
+        : undefined,
+    perfReview:
+      commandId === 'perf-review'
+        ? {
+            profilingGoals: context.perfReview?.profilingGoals ?? [],
+            suspectedScreens: context.perfReview?.suspectedScreens ?? [],
+            targetFlow: context.perfReview?.targetFlow,
+            expectedInteraction: context.perfReview?.expectedInteraction,
+          }
+        : undefined,
+    dev:
+      commandId === 'dev'
+        ? {
+            allowedValidations: context.dev?.allowedValidations ?? [],
+            branchStrategy: context.dev?.branchStrategy,
+            writePolicy: context.dev?.writePolicy ?? 'workspace',
+            pushPolicy: context.dev?.pushPolicy ?? 'disabled',
+          }
+        : undefined,
   }
 }
 

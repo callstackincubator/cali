@@ -1,5 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 
+import { DOCS_URLS } from './docs.js'
+
 const DEFAULT_QA_MODEL_ID = 'openai/gpt-5.4-mini'
 
 function stripAnthropicPrefix(modelId: string) {
@@ -28,6 +30,10 @@ export function createQaAgentModel(modelId = process.env.QA_MODEL ?? DEFAULT_QA_
   }
 
   throw new Error(
-    'Missing AI credentials. Set AI_GATEWAY_API_KEY (or AI_GATEWAY_KEY) for gateway access, or ANTHROPIC_API_KEY / CLAUDE_API_KEY for direct Anthropic access.'
+    [
+      'Missing AI credentials.',
+      'Set AI_GATEWAY_API_KEY (or AI_GATEWAY_KEY) for gateway access, or ANTHROPIC_API_KEY / CLAUDE_API_KEY for direct Anthropic access.',
+      `Docs: ${DOCS_URLS.providerSetup}`,
+    ].join('\n\n')
   )
 }

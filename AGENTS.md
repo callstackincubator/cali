@@ -58,6 +58,13 @@ Implemented first-class commands:
 - `perf-review`
 - `dev`
 
+Current maturity:
+
+- `qa`: ship-ready
+- `review`: experimental
+- `perf-review`: experimental
+- `dev`: experimental
+
 `publish` is intentionally not implemented. Release automation belongs in CI or in `dev`-driven pipeline work, not as an open-ended agent command.
 
 ## Core Contracts
@@ -103,9 +110,7 @@ Built-in pack ids:
 - `agent-device`
 - `repo-read`
 - `repo-write`
-- `github`
 - `react-devtools`
-- `report`
 
 Required skill guidance should be preloaded through the tool-pack registry when a pack depends on a skill workflow. Do not push that responsibility into individual prompts by hand.
 
@@ -158,6 +163,8 @@ Required skill guidance should be preloaded through the tool-pack registry when 
   - relevant `--help` command smoke tests
 - For command/runtime changes:
   - run at least one source-mode smoke command if possible
+- For docs/setup changes:
+  - keep `packages/cali/README.md` copy-pasteable for provider setup and CI examples
 
 Do not commit generated `artifacts/` output.
 

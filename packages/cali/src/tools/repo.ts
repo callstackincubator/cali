@@ -4,7 +4,7 @@ import path from 'node:path'
 import { tool } from 'ai'
 import { z } from 'zod'
 
-import { ensureCommandExists, ensureDirectory, resolveFromCwd, runCommand } from '../utils.js'
+import { ensureDirectory, resolveFromCwd, runCommand } from '../utils.js'
 
 type RepoReadToolPackOptions = {
   workspaceRoot: string
@@ -17,9 +17,6 @@ type RepoWriteToolPackOptions = {
 
 export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
   const { workspaceRoot } = options
-  const ensureRipgrep = () =>
-    ensureCommandExists('rg', 'Install ripgrep and make sure `rg` is on PATH.')
-  const ensureGit = () => ensureCommandExists('git', 'Install Git and make sure `git` is on PATH.')
 
   return {
     list_repo_files: tool({
@@ -29,7 +26,6 @@ export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
         maxResults: z.number().int().min(1).max(500).optional(),
       }),
       execute: async ({ pattern, maxResults = 200 }) => {
-        await ensureRipgrep()
         const args = ['--files']
         if (pattern?.trim()) {
           args.push('-g', pattern.trim())
@@ -59,7 +55,6 @@ export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
         maxResults: z.number().int().min(1).max(200).optional(),
       }),
       execute: async ({ query, glob, maxResults = 100 }) => {
-        await ensureRipgrep()
         const args = ['-n', '--no-heading', query]
         if (glob?.trim()) {
           args.push('-g', glob.trim())
@@ -106,7 +101,6 @@ export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
       description: 'Read the current git status for the repository.',
       inputSchema: z.object({}),
       execute: async () => {
-        await ensureGit()
         const result = await runCommand('git', ['status', '--short', '--branch'], {
           cwd: workspaceRoot,
           allowFailure: true,
@@ -127,7 +121,6 @@ export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
         maxLines: z.number().int().min(1).max(800).optional(),
       }),
       execute: async ({ baseRef, path: relativePath, maxLines = 400 }) => {
-        await ensureGit()
         const args = ['diff']
         if (baseRef?.trim()) {
           args.push(baseRef.trim())
@@ -153,11 +146,6 @@ export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
 
 export function createRepoWriteToolPack(options: RepoWriteToolPackOptions) {
   const { workspaceRoot, allowedCommands = [] } = options
-  const ensureShell = () =>
-    ensureCommandExists(
-      'zsh',
-      'Install zsh and make sure `zsh` is on PATH for repository commands.'
-    )
 
   return {
     write_repo_file: tool({
@@ -199,7 +187,6 @@ export function createRepoWriteToolPack(options: RepoWriteToolPackOptions) {
         command: z.string(),
       }),
       execute: async ({ command }) => {
-        await ensureShell()
         if (allowedCommands.length > 0 && !allowedCommands.includes(command)) {
           return {
             ok: false,

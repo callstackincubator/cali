@@ -1,7 +1,5 @@
 import { createHash } from 'node:crypto'
-import { existsSync, readdirSync } from 'node:fs'
 import { readdir, rm, stat } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import path from 'node:path'
 
 import type { CaliEnvName } from '../config/schema.js'
@@ -40,7 +38,6 @@ async function runAgentDeviceCommand(
   args: string[],
   options: Parameters<typeof runCommand>[2] = {}
 ) {
-  await ensureCommandExists('agent-device', 'npm i -g agent-device')
   return runCommand('agent-device', [command, ...args], options)
 }
 
@@ -50,7 +47,6 @@ async function runAgentDeviceSessionCommand(
   args: string[],
   options: Parameters<typeof runCommand>[2] = {}
 ) {
-  await ensureCommandExists('agent-device', 'npm i -g agent-device')
   return runCommand(
     'agent-device',
     [...getAgentDeviceSessionArgs(sessionName), command, ...args],
@@ -68,84 +64,20 @@ async function readCommandStdout(file: string, args: string[]) {
   return value.length > 0 ? value : undefined
 }
 
-function findNewestSdkToolPath(baseDirectory: string, childPath: string) {
-  if (!existsSync(baseDirectory)) {
-    return undefined
-  }
-
-  const children = readdirSync(baseDirectory).sort().reverse()
-  for (const child of children) {
-    const candidate = path.join(baseDirectory, child, childPath)
-    if (existsSync(candidate)) {
-      return candidate
-    }
-  }
-
-  return undefined
-}
-
-function getAndroidSdkRoots() {
-  return [
-    process.env.ANDROID_HOME,
-    process.env.ANDROID_SDK_ROOT,
-    path.join(homedir(), 'Library', 'Android', 'sdk'),
-  ].filter((value): value is string => Boolean(value))
-}
-
-function getAndroidSdkApkanalyzerCandidates() {
-  const candidates: string[] = []
-  for (const sdkRoot of getAndroidSdkRoots()) {
-    const latestApkanalyzer = findNewestSdkToolPath(
-      path.join(sdkRoot, 'cmdline-tools'),
-      path.join('bin', 'apkanalyzer')
-    )
-    if (latestApkanalyzer) {
-      candidates.push(latestApkanalyzer)
-    }
-
-    const legacyApkanalyzer = path.join(sdkRoot, 'tools', 'bin', 'apkanalyzer')
-    if (existsSync(legacyApkanalyzer)) {
-      candidates.push(legacyApkanalyzer)
-    }
-  }
-
-  return [...new Set(candidates)]
-}
-
-function getAndroidSdkAaptCandidates() {
-  const sdkRoots = [...getAndroidSdkRoots()]
-
-  const candidates: string[] = []
-  for (const sdkRoot of sdkRoots) {
-    const latestAapt = findNewestSdkToolPath(path.join(sdkRoot, 'build-tools'), 'aapt')
-    if (latestAapt) {
-      candidates.push(latestAapt)
-    }
-  }
-
-  return [...new Set(candidates)]
-}
-
 async function inferAndroidAppId(artifactPath: string) {
-  const apkanalyzerCommands = ['apkanalyzer', ...getAndroidSdkApkanalyzerCandidates()]
-  for (const commandPath of apkanalyzerCommands) {
-    const apkanalyzerValue = await readCommandStdout(commandPath, [
-      'manifest',
-      'application-id',
-      artifactPath,
-    ])
-    if (apkanalyzerValue) {
-      return apkanalyzerValue.split('\n').at(-1)?.trim()
-    }
+  const apkanalyzerValue = await readCommandStdout('apkanalyzer', [
+    'manifest',
+    'application-id',
+    artifactPath,
+  ])
+  if (apkanalyzerValue) {
+    return apkanalyzerValue.split('\n').at(-1)?.trim()
   }
 
-  const aaptCommands = ['aapt', ...getAndroidSdkAaptCandidates()]
-  for (const commandPath of aaptCommands) {
-    const aaptValue = await readCommandStdout(commandPath, ['dump', 'badging', artifactPath])
-    const packageName = aaptValue?.match(/package: name='([^']+)'/)?.[1]
-    if (packageName) {
-      return packageName
-    }
+  const aaptValue = await readCommandStdout('aapt', ['dump', 'badging', artifactPath])
+  const packageName = aaptValue?.match(/package: name='([^']+)'/)?.[1]
+  if (packageName) {
+    return packageName
   }
 
   return undefined
@@ -336,6 +268,7 @@ export async function resolveMobileRuntimeContext(
   envName: CaliEnvName,
   context: CaliContext
 ): Promise<MobileCommandRuntimeContext> {
+  await ensureCommandExists('agent-device', 'npm i -g agent-device')
   const platform = context.mobile?.platform
   const artifactPath = context.mobile?.artifactPath
   const outputDir = context.output.outputDir

@@ -22,11 +22,11 @@ Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It ru
 - `cali qa`
   - mobile QA pass with `agent-device`
 - `cali review`
-  - findings-first PR/repository review
+  - findings-first PR/repository review (experimental)
 - `cali perf-review`
-  - runtime performance review with `agent-device` and `react-devtools`
+  - runtime performance review with `agent-device` and `react-devtools` (experimental)
 - `cali dev`
-  - repository-backed implementation flow
+  - repository-backed implementation flow (experimental)
 
 ## Shared Context
 
@@ -108,6 +108,8 @@ cali qa --env mobile-pr --context ./cali-context.json
 cali review --env mobile-pr --context ./cali-context.json
 ```
 
+Use `--quiet` to suppress the retro banner in scripted environments. Cali also suppresses the banner automatically when `CI=true`.
+
 ### Runtime performance review
 
 ```bash
@@ -123,14 +125,51 @@ cali perf-review \
 cali dev --env mobile-pr --context ./cali-context.json --prompt "implement issue 123"
 ```
 
-## Credentials
+## Provider Setup
 
 Cali supports two model auth paths:
 
-- AI Gateway: `AI_GATEWAY_API_KEY`
-- AI Gateway alias: `AI_GATEWAY_KEY`
-- Anthropic direct: `ANTHROPIC_API_KEY`
-- Anthropic alias: `CLAUDE_API_KEY`
+### AI Gateway
+
+```bash
+export AI_GATEWAY_API_KEY="your-ai-gateway-key"
+export QA_MODEL="openai/gpt-5.4-mini"
+```
+
+Gateway also accepts the compatibility alias:
+
+```bash
+export AI_GATEWAY_KEY="your-ai-gateway-key"
+```
+
+### Anthropic Direct
+
+```bash
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+export QA_MODEL="anthropic/claude-sonnet-4.6"
+```
+
+Anthropic also accepts the compatibility alias:
+
+```bash
+export CLAUDE_API_KEY="your-anthropic-api-key"
+```
+
+### `.env` example
+
+```dotenv
+AI_GATEWAY_API_KEY=your-ai-gateway-key
+QA_MODEL=openai/gpt-5.4-mini
+```
+
+or:
+
+```dotenv
+ANTHROPIC_API_KEY=your-anthropic-api-key
+QA_MODEL=anthropic/claude-sonnet-4.6
+```
+
+`packages/cali` loads `.env` automatically from the current workspace before it starts a run.
 
 Cali defaults to `openai/gpt-5.4-mini`. If gateway credentials are present, that model is routed through AI Gateway. Direct provider support in this package is Anthropic only.
 
@@ -147,7 +186,97 @@ Some commands shell out to local binaries:
 - `review`: requires `git` and `rg`
 - `dev`: requires `git`, `rg`, and `zsh`
 
+Install examples:
+
+```bash
+npm i -g agent-device
+npm i -g agent-react-devtools
+```
+
+On macOS/Linux, Git and `zsh` are usually present already. Install ripgrep if `rg` is missing.
+
+If you want Android app id inference from an `.apk` without passing `--app-id`, make sure either `apkanalyzer` or `aapt` is on `PATH`.
+
 If one of these is missing, Cali stops with an actionable error instead of trying to install it automatically.
+
+## CI Providers
+
+The current ship-ready CI story for Cali is:
+
+- generate one `cali-context.json`
+- run `cali qa --env mobile-pr --context ./cali-context.json`
+- collect `artifacts/qa/report.json`, `section.md`, `status.txt`, and optional blob screenshot URLs
+
+### GitHub Actions
+
+Use the example context writer:
+
+- [`examples/github-actions/write-mobile-pr-context.sh`](./examples/github-actions/write-mobile-pr-context.sh)
+
+Required envs for that script:
+
+- `CALI_PLATFORM`
+- `CALI_ARTIFACT_PATH`
+- optional `CALI_APP_ID`
+- optional `CALI_DEVICE_NAME`
+
+Copy-paste example:
+
+```yaml
+- name: Install Cali CLIs
+  run: npm i -g agent-device
+
+- name: Write Cali context
+  env:
+    CALI_PLATFORM: android
+    CALI_ARTIFACT_PATH: ${{ steps.download_build.outputs.artifact_path }}
+    CALI_APP_ID: com.example.myapp
+  run: bash ./packages/cali/examples/github-actions/write-mobile-pr-context.sh ./cali-context.json
+
+- name: Run Cali QA
+  env:
+    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+  run: node ./packages/cali/dist/index.js qa --env mobile-pr --context ./cali-context.json
+```
+
+### EAS Workflows
+
+Use the example context writer:
+
+- [`examples/eas-workflows/write-mobile-pr-context.sh`](./examples/eas-workflows/write-mobile-pr-context.sh)
+
+This matches the environment shape from the earlier `eas-agent-device` workflow pattern:
+
+- `QA_PLATFORM`
+- `APP_PATH`
+- `APPLICATION_ID`
+- optional `BUILD_ID`
+- optional `WORKFLOW_URL`
+- optional `PR_JSON`
+
+Copy-paste example:
+
+```yaml
+- id: install_agent_device
+  run: npm i -g agent-device
+
+- id: write_cali_context
+  env:
+    QA_PLATFORM: android
+    APP_PATH: ${{ steps.download_build.outputs.artifact_path }}
+    APPLICATION_ID: dev.expo.myapp
+    BUILD_ID: ${{ env.BUILD_ID }}
+    WORKFLOW_URL: ${{ workflow.url }}
+    PR_JSON: ${{ toJSON(github.event.pull_request) }}
+  run: bash ./packages/cali/examples/eas-workflows/write-mobile-pr-context.sh ./cali-context.json
+
+- id: run_cali_qa
+  env:
+    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+  run: node ./packages/cali/dist/index.js qa --env mobile-pr --context ./cali-context.json
+```
+
+If you want a combined PR comment like the original Expo blog post flow, aggregate `section.md`, `status.txt`, and `report.json` from each platform job in a final workflow step. Cali intentionally leaves that aggregation to the workflow layer.
 
 ## Config
 
@@ -189,16 +318,14 @@ Built-in tool pack ids:
 - `agent-device`
 - `repo-read`
 - `repo-write`
-- `github`
 - `react-devtools`
-- `report`
 
 Command defaults:
 
-- `qa`: `skills`, `agent-device`, `report`
-- `review`: `repo-read`, `github`, `skills`, `report`
-- `perf-review`: `skills`, `agent-device`, `react-devtools`, `repo-read`, `report`
-- `dev`: `repo-read`, `repo-write`, `github`, `skills`, `report`
+- `qa`: `skills`, `agent-device`
+- `review`: `repo-read`, `skills` (experimental)
+- `perf-review`: `skills`, `agent-device`, `react-devtools`, `repo-read` (experimental)
+- `dev`: `repo-read`, `repo-write`, `skills` (experimental)
 
 ## Package Scripts
 

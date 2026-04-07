@@ -6,12 +6,11 @@ const ToolPackNameSchema = z.enum([
   'agent-device',
   'repo-read',
   'repo-write',
-  'github',
   'react-devtools',
-  'report',
 ])
 const PublisherNameSchema = z.enum(['file', 'blob'])
-const CommandIdSchema = z.enum(['qa', 'review', 'perf-review', 'dev'])
+export const COMMAND_IDS = ['qa', 'review', 'perf-review', 'dev'] as const
+const CommandIdSchema = z.enum(COMMAND_IDS)
 const CaliPlatformSchema = z.enum(['android', 'ios'])
 
 const StringArraySchema = z.union([z.string(), z.array(z.string())]).optional()

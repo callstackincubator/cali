@@ -86,8 +86,6 @@ export async function runToolLoopRole<TOutput>(options: RunToolLoopRoleOptions<T
     },
   })
 
-  let resultText = ''
-
   const result = await agent.generate({
     prompt,
     onStepFinish: async ({ stepNumber, finishReason, toolCalls, usage }) => {
@@ -107,14 +105,11 @@ export async function runToolLoopRole<TOutput>(options: RunToolLoopRoleOptions<T
     },
   })
 
-  resultText = result.text
-
   if (!reportInput) {
     reportInput = createMissingReport()
   }
 
   return {
     reportInput,
-    resultText,
   }
 }

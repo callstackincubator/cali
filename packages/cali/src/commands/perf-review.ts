@@ -1,26 +1,9 @@
 import type { PerfReviewReport, ScreenshotInfo } from '../report/types.js'
 import { runPerfReviewRole } from '../roles/perf-review.js'
-import {
-  bootstrapMobileApp,
-  closeAgentDeviceSession,
-  createAgentDeviceSessionName,
-  listScreenshots,
-  prepareMobileOutputDirectories,
-  resolveMobileRuntimeContext,
-} from '../runtime/mobile.js'
-import { publishReport } from '../runtime/publishers.js'
-import { prepareToolPacks } from '../runtime/tool-packs.js'
 import type { CommandCliOptions } from '../runtime/types.js'
+import { listScreenshots } from '../runtime/mobile.js'
 import { humanizeScreenshotLabel } from '../utils.js'
-import {
-  createRunContextTool,
-  formatAgentFinishDetail,
-  formatAgentStepDetail,
-  loadRunContext,
-  printPhase,
-  printFinalReport,
-  summarizeReason,
-} from './shared.js'
+import { runMobileStructuredCommand } from './shared.js'
 
 function composePerfReviewReport(
   model: string,
@@ -54,7 +37,9 @@ function composePerfReviewReport(
   }
 }
 
-function createBlockedPerfReviewReport(summary: string) {
+function createBlockedPerfReviewReport(summary: string): Awaited<
+  ReturnType<typeof runPerfReviewRole>
+>['reportInput'] {
   return {
     overallStatus: 'blocked' as const,
     summary,
@@ -70,82 +55,45 @@ function createBlockedPerfReviewReport(summary: string) {
 }
 
 export async function runPerfReviewCommand(cli: CommandCliOptions) {
-  const { cwd, config, context } = await loadRunContext('perf-review', cli)
+  return runMobileStructuredCommand({
+    commandId: 'perf-review',
+    cli,
+    roleLabel: 'Perf-review',
+    reportLabel: 'Perf-review report',
+    createBlockedReport: createBlockedPerfReviewReport,
+    composeReport: async ({ model, context, reportInput, mobileContext, traces }) => {
+      const screenshots = mobileContext ? await listScreenshots(mobileContext.screenshotsDir) : []
 
-  let reportInput: Awaited<ReturnType<typeof runPerfReviewRole>>['reportInput']
-  let agentDeviceTrace: PerfReviewReport['agentDeviceTrace'] = []
-  let reactDevtoolsTrace: PerfReviewReport['reactDevtoolsTrace'] = []
-  let mobileContext: Awaited<ReturnType<typeof resolveMobileRuntimeContext>> | undefined
-  let sessionName: string | undefined
-
-  try {
-    mobileContext = await resolveMobileRuntimeContext('perf-review', config.envName, context)
-    sessionName = createAgentDeviceSessionName(mobileContext.platform)
-
-    printPhase(
-      'Preparing output',
-      `${mobileContext.platform} | ${mobileContext.deviceName ?? 'bound device'} | ${mobileContext.appId}`
-    )
-    await prepareMobileOutputDirectories(mobileContext)
-    printPhase('Bootstrapping app', mobileContext.artifactPath)
-    await bootstrapMobileApp('perf-review', config.envName, mobileContext, sessionName)
-    printPhase('Bootstrap complete')
-
-    printPhase('Preparing tool packs', config.enabledToolPacks.join(', '))
-    const preparedToolPacks = await prepareToolPacks({
+      return composePerfReviewReport(
+        model,
+        context,
+        reportInput,
+        screenshots,
+        traces.agentDeviceTrace,
+        traces.reactDevtoolsTrace
+      )
+    },
+    runRole: async ({
       context,
-      skillPaths: config.skillPaths,
-      enabledToolPacks: config.enabledToolPacks,
-      sessionName,
-    })
-
-    printPhase('Running perf-review agent', config.model)
-    const roleResult = await runPerfReviewRole({
-      context,
-      modelId: config.model,
-      tools: {
-        ...preparedToolPacks.tools,
-        get_run_context: createRunContextTool('perf-review', context),
-      },
-      availableSkillsPrompt: preparedToolPacks.availableSkillsPrompt,
-      preloadedSkillsPrompt: preparedToolPacks.preloadedSkillsPrompt,
-      extraInstructions: config.extraInstructions,
-      prompt: cli.prompt,
-      onAgentStep: (event) => {
-        printPhase('Perf-review step complete', formatAgentStepDetail(event))
-      },
-      onAgentFinish: (event) => {
-        printPhase('Perf-review agent finished', formatAgentFinishDetail(event))
-      },
-    })
-
-    reportInput = roleResult.reportInput
-    agentDeviceTrace = preparedToolPacks.traces.agentDeviceTrace
-    reactDevtoolsTrace = preparedToolPacks.traces.reactDevtoolsTrace
-  } catch (unknownError) {
-    const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
-    printPhase('Run blocked', summarizeReason(error.message))
-    reportInput = createBlockedPerfReviewReport(error.message)
-  } finally {
-    if (sessionName) {
-      await closeAgentDeviceSession(sessionName)
-    }
-  }
-
-  const screenshots = mobileContext ? await listScreenshots(mobileContext.screenshotsDir) : []
-  const report = composePerfReviewReport(
-    config.model,
-    context,
-    reportInput,
-    screenshots,
-    agentDeviceTrace,
-    reactDevtoolsTrace
-  )
-  printPhase('Publishing report', config.outputPublishers.join(', '))
-  const publishedReport = await publishReport({
-    report,
-    publishers: config.outputPublishers,
+      modelId,
+      tools,
+      availableSkillsPrompt,
+      preloadedSkillsPrompt,
+      extraInstructions,
+      prompt,
+      onAgentStep,
+      onAgentFinish,
+    }) =>
+      runPerfReviewRole({
+        context,
+        modelId,
+        tools,
+        availableSkillsPrompt,
+        preloadedSkillsPrompt,
+        extraInstructions,
+        prompt,
+        onAgentStep,
+        onAgentFinish,
+      }),
   })
-
-  printFinalReport(cwd, 'perf-review', 'Perf-review report', publishedReport)
 }

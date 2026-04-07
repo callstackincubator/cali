@@ -69,40 +69,100 @@ const OutputSchema = z
   })
   .optional()
 
-const CaliContextFileSchema = z.object({
-  workspaceRoot: z.string().optional(),
-  repository: RepositorySchema,
-  task: TaskSchema,
-  pullRequest: PullRequestSchema,
-  mobile: MobileSchema,
-  build: BuildSchema,
-  output: OutputSchema,
-  qa: z
-    .object({
-      acceptanceCriteria: z.union([z.string(), z.array(z.string())]).optional(),
-    })
-    .optional(),
-  review: z.object({}).optional(),
-  perfReview: z
-    .object({
-      targetFlow: z.string().optional(),
-      expectedInteraction: z.string().optional(),
-      profilingGoals: LabelsSchema,
-      suspectedScreens: LabelsSchema,
-    })
-    .optional(),
-  dev: z
-    .object({
-      branchStrategy: z.string().optional(),
-      allowedValidations: LabelsSchema,
-      writePolicy: z.enum(['workspace', 'none']).optional(),
-      pushPolicy: z.enum(['disabled', 'manual', 'auto']).optional(),
-    })
-    .optional(),
-})
-
 function normalizeLabels(values: string[] | undefined) {
   return values ?? []
+}
+
+function resolveOptionalPath(cwd: string, value?: string) {
+  return value ? resolveFromCwd(cwd, value) : undefined
+}
+
+function createContextFileSchema(cwd: string) {
+  return z
+    .object({
+      workspaceRoot: z.string().optional(),
+      repository: RepositorySchema,
+      task: TaskSchema,
+      pullRequest: PullRequestSchema,
+      mobile: MobileSchema,
+      build: BuildSchema,
+      output: OutputSchema,
+      qa: z
+        .object({
+          acceptanceCriteria: z.union([z.string(), z.array(z.string())]).optional(),
+        })
+        .optional(),
+      review: z.object({}).optional(),
+      perfReview: z
+        .object({
+          targetFlow: z.string().optional(),
+          expectedInteraction: z.string().optional(),
+          profilingGoals: LabelsSchema,
+          suspectedScreens: LabelsSchema,
+        })
+        .optional(),
+      dev: z
+        .object({
+          branchStrategy: z.string().optional(),
+          allowedValidations: LabelsSchema,
+          writePolicy: z.enum(['workspace', 'none']).optional(),
+          pushPolicy: z.enum(['disabled', 'manual', 'auto']).optional(),
+        })
+        .optional(),
+    })
+    .transform(
+      (parsed): Partial<CaliContext> => ({
+        workspaceRoot: resolveOptionalPath(cwd, parsed.workspaceRoot),
+        repository: parsed.repository,
+        task: parsed.task
+          ? {
+              ...parsed.task,
+              labels: normalizeLabels(parsed.task.labels),
+            }
+          : undefined,
+        pullRequest: parsed.pullRequest
+          ? {
+              ...parsed.pullRequest,
+              labels: normalizeLabels(parsed.pullRequest.labels),
+              isDraft: parsed.pullRequest.isDraft ?? false,
+            }
+          : undefined,
+        mobile: parsed.mobile
+          ? {
+              ...parsed.mobile,
+              artifactPath: resolveOptionalPath(cwd, parsed.mobile.artifactPath),
+            }
+          : undefined,
+        build: parsed.build,
+        output: {
+          outputDir: resolveOptionalPath(cwd, parsed.output?.outputDir),
+          screenshotsDir: resolveOptionalPath(cwd, parsed.output?.screenshotsDir),
+        },
+        qa: parsed.qa
+          ? {
+              acceptanceCriteria: Array.isArray(parsed.qa.acceptanceCriteria)
+                ? parsed.qa.acceptanceCriteria
+                : parsed.qa.acceptanceCriteria
+                  ? [parsed.qa.acceptanceCriteria]
+                  : [],
+            }
+          : undefined,
+        review: parsed.review,
+        perfReview: parsed.perfReview
+          ? {
+              ...parsed.perfReview,
+              profilingGoals: normalizeLabels(parsed.perfReview.profilingGoals),
+              suspectedScreens: normalizeLabels(parsed.perfReview.suspectedScreens),
+            }
+          : undefined,
+        dev: parsed.dev
+          ? {
+              ...parsed.dev,
+              allowedValidations: normalizeLabels(parsed.dev.allowedValidations),
+            }
+          : undefined,
+      })
+    )
 }
 
 export async function loadContextFile(
@@ -115,63 +175,5 @@ export async function loadContextFile(
 
   const absolutePath = resolveFromCwd(cwd, contextPath)
   const content = await readFile(absolutePath, 'utf8')
-  const parsed = CaliContextFileSchema.parse(JSON.parse(content))
-
-  return {
-    workspaceRoot: parsed.workspaceRoot ? resolveFromCwd(cwd, parsed.workspaceRoot) : undefined,
-    repository: parsed.repository ? { ...parsed.repository } : undefined,
-    task: parsed.task
-      ? {
-          ...parsed.task,
-          labels: normalizeLabels(parsed.task.labels),
-        }
-      : undefined,
-    pullRequest: parsed.pullRequest
-      ? {
-          ...parsed.pullRequest,
-          labels: normalizeLabels(parsed.pullRequest.labels),
-          isDraft: parsed.pullRequest.isDraft ?? false,
-        }
-      : undefined,
-    mobile: parsed.mobile
-      ? {
-          ...parsed.mobile,
-          artifactPath: parsed.mobile.artifactPath
-            ? resolveFromCwd(cwd, parsed.mobile.artifactPath)
-            : undefined,
-        }
-      : undefined,
-    build: parsed.build,
-    output: {
-      outputDir: parsed.output?.outputDir
-        ? resolveFromCwd(cwd, parsed.output.outputDir)
-        : undefined,
-      screenshotsDir: parsed.output?.screenshotsDir
-        ? resolveFromCwd(cwd, parsed.output.screenshotsDir)
-        : undefined,
-    },
-    qa: parsed.qa
-      ? {
-          acceptanceCriteria: Array.isArray(parsed.qa.acceptanceCriteria)
-            ? parsed.qa.acceptanceCriteria
-            : parsed.qa.acceptanceCriteria
-              ? [parsed.qa.acceptanceCriteria]
-              : [],
-        }
-      : undefined,
-    review: parsed.review,
-    perfReview: parsed.perfReview
-      ? {
-          ...parsed.perfReview,
-          profilingGoals: normalizeLabels(parsed.perfReview.profilingGoals),
-          suspectedScreens: normalizeLabels(parsed.perfReview.suspectedScreens),
-        }
-      : undefined,
-    dev: parsed.dev
-      ? {
-          ...parsed.dev,
-          allowedValidations: normalizeLabels(parsed.dev.allowedValidations),
-        }
-      : undefined,
-  }
+  return createContextFileSchema(cwd).parse(JSON.parse(content))
 }

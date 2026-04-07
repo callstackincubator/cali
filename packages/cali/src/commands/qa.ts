@@ -1,26 +1,11 @@
 import type { QaReport, QaReportInput, ScreenshotInfo } from '../report/types.js'
 import { runQaMobileRole } from '../roles/qa-mobile.js'
-import {
-  bootstrapMobileApp,
-  closeAgentDeviceSession,
-  createAgentDeviceSessionName,
-  listScreenshots,
-  prepareMobileOutputDirectories,
-  resolveMobileRuntimeContext,
-} from '../runtime/mobile.js'
-import { publishReport } from '../runtime/publishers.js'
-import { prepareToolPacks } from '../runtime/tool-packs.js'
 import type { CommandCliOptions } from '../runtime/types.js'
+import { listScreenshots } from '../runtime/mobile.js'
 import { humanizeScreenshotLabel } from '../utils.js'
-import {
-  createRunContextTool,
-  formatAgentFinishDetail,
-  formatAgentStepDetail,
-  loadRunContext,
-  printPhase,
-  printFinalReport,
-  summarizeReason,
-} from './shared.js'
+import { runMobileStructuredCommand } from './shared.js'
+
+const MAX_QA_TRACE_ENTRIES = 20
 
 function resolveAcceptanceCriteria(
   context: Parameters<typeof runQaMobileRole>[0]['context'],
@@ -93,83 +78,50 @@ function createBlockedReport(summary: string): QaReportInput {
 }
 
 export async function runQaCommand(cli: CommandCliOptions) {
-  const { cwd, config, context } = await loadRunContext('qa', cli)
-  const acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
+  return runMobileStructuredCommand({
+    commandId: 'qa',
+    cli,
+    roleLabel: 'QA',
+    reportLabel: 'QA report',
+    createBlockedReport,
+    composeReport: async ({ model, context, reportInput, mobileContext, traces }) => {
+      const acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
+      const screenshots = mobileContext ? await listScreenshots(mobileContext.screenshotsDir) : []
 
-  let reportInput: QaReportInput
-  let agentDeviceTrace: QaReport['agentDeviceTrace'] = []
-  let mobileContext: Awaited<ReturnType<typeof resolveMobileRuntimeContext>> | undefined
-  let sessionName: string | undefined
-
-  try {
-    mobileContext = await resolveMobileRuntimeContext('qa', config.envName, context)
-    sessionName = createAgentDeviceSessionName(mobileContext.platform)
-
-    printPhase(
-      'Preparing output',
-      `${mobileContext.platform} | ${mobileContext.deviceName ?? 'bound device'} | ${mobileContext.appId}`
-    )
-    await prepareMobileOutputDirectories(mobileContext)
-
-    printPhase('Bootstrapping app', mobileContext.artifactPath)
-    await bootstrapMobileApp('qa', config.envName, mobileContext, sessionName)
-    printPhase('Bootstrap complete')
-
-    printPhase('Preparing tool packs', config.enabledToolPacks.join(', '))
-    const preparedToolPacks = await prepareToolPacks({
+      return composeQaReport(
+        model,
+        context,
+        reportInput,
+        screenshots,
+        traces.agentDeviceTrace.slice(-MAX_QA_TRACE_ENTRIES),
+        acceptanceCriteriaUsed
+      )
+    },
+    runRole: async ({
       context,
-      skillPaths: config.skillPaths,
-      enabledToolPacks: config.enabledToolPacks,
-      sessionName,
-    })
+      modelId,
+      tools,
+      availableSkillsPrompt,
+      preloadedSkillsPrompt,
+      extraInstructions,
+      prompt,
+      onAgentStep,
+      onAgentFinish,
+    }) => {
+      const acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
 
-    printPhase('Running QA agent', config.model)
-    const roleResult = await runQaMobileRole({
-      context,
-      modelId: config.model,
-      tools: {
-        ...preparedToolPacks.tools,
-        get_run_context: createRunContextTool('qa', context),
-      },
-      availableSkillsPrompt: preparedToolPacks.availableSkillsPrompt,
-      preloadedSkillsPrompt: preparedToolPacks.preloadedSkillsPrompt,
-      extraInstructions: config.extraInstructions,
-      prompt: cli.prompt,
-      acceptanceCriteriaUsed,
-      onAgentStep: (event) => {
-        printPhase('QA agent step complete', formatAgentStepDetail(event))
-      },
-      onAgentFinish: (event) => {
-        printPhase('QA agent finished', formatAgentFinishDetail(event))
-      },
-    })
-
-    reportInput = roleResult.reportInput
-    agentDeviceTrace = preparedToolPacks.traces.agentDeviceTrace
-  } catch (unknownError) {
-    const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
-    printPhase('Run blocked', summarizeReason(error.message))
-    reportInput = createBlockedReport(error.message)
-  } finally {
-    if (sessionName) {
-      await closeAgentDeviceSession(sessionName)
-    }
-  }
-
-  const screenshots = mobileContext ? await listScreenshots(mobileContext.screenshotsDir) : []
-  const report = composeQaReport(
-    config.model,
-    context,
-    reportInput,
-    screenshots,
-    agentDeviceTrace,
-    acceptanceCriteriaUsed
-  )
-  printPhase('Publishing report', config.outputPublishers.join(', '))
-  const publishedReport = await publishReport({
-    report,
-    publishers: config.outputPublishers,
+      return runQaMobileRole({
+        context,
+        modelId,
+        tools,
+        availableSkillsPrompt,
+        preloadedSkillsPrompt,
+        extraInstructions,
+        prompt,
+        acceptanceCriteriaUsed,
+        onAgentStep,
+        onAgentFinish,
+      })
+    },
   })
-
-  printFinalReport(cwd, 'qa', 'QA report', publishedReport)
 }

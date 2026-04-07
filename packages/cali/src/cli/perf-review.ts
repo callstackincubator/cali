@@ -8,15 +8,14 @@ import {
 } from './shared.js'
 
 export const perfReviewCommandDefinition = {
-  register(cli: CAC, printBanner: () => void) {
+  register(cli: CAC) {
     registerCommonMobileOptions(
-      cli.command('perf-review', 'Run the mobile performance review role')
+      cli.command('perf-review', 'Run the mobile performance review role (experimental)')
     )
       .example(
         'perf-review --env mobile-pr --context ./cali-context.json --prompt "profile the checkout flow"'
       )
       .action(async (options: unknown) => {
-        printBanner()
         await runPerfReviewCommand(normalizeBaseCommandCliOptions(options as BaseCommandOptions))
       })
   },

@@ -20,7 +20,7 @@ export type ScreenshotInfo = {
 
 export type ReportPublisherResult = {
   publisher: string
-  ok: boolean
+  status: 'ok' | 'skipped' | 'failed'
   detail?: string
 }
 

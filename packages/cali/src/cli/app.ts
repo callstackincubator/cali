@@ -7,17 +7,26 @@ import { perfReviewCommandDefinition } from './perf-review.js'
 import { qaCommandDefinition } from './qa.js'
 import { reviewCommandDefinition } from './review.js'
 
+function shouldPrintBanner(args: string[]) {
+  if (args.includes('--quiet') || process.env.CI === 'true' || process.env.CI === '1') {
+    return false
+  }
+
+  return true
+}
+
 function createCli() {
   const cli = cac('cali')
 
   cli.usage('<command> [options]')
+  cli.option('--quiet', 'Suppress Cali banner output')
   for (const commandDefinition of [
     qaCommandDefinition,
     reviewCommandDefinition,
     perfReviewCommandDefinition,
     devCommandDefinition,
   ]) {
-    commandDefinition.register(cli, printRetroBanner)
+    commandDefinition.register(cli)
   }
   cli.help()
 
@@ -27,21 +36,27 @@ function createCli() {
 export async function runCli(argv = process.argv) {
   const cli = createCli()
   const args = argv.slice(2)
-  const shouldPrintBanner = args.length === 0 || args.includes('--help') || args.includes('-h')
   const cwd = process.cwd()
-
-  if (shouldPrintBanner) {
-    printRetroBanner()
-  }
-
+  const printBanner = shouldPrintBanner(args)
   if (args.length === 0) {
     const config = await loadCaliConfigFile(cwd)
     if (config.defaultCommand) {
+      if (printBanner) {
+        printRetroBanner()
+      }
       await Promise.resolve(
         cli.parse([argv[0] ?? 'node', argv[1] ?? 'cali', config.defaultCommand])
       )
       return
     }
+
+    if (printBanner) {
+      printRetroBanner()
+    }
+  }
+
+  if (args.length > 0 && printBanner) {
+    printRetroBanner()
   }
 
   await Promise.resolve(cli.parse(argv))

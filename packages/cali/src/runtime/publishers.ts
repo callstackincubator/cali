@@ -20,18 +20,21 @@ export async function publishReport(options: PublishReportOptions) {
 
     try {
       if (publisher === 'blob') {
-        currentReport = await publishBlobReport({ report: currentReport })
+        const blobResult = await publishBlobReport({ report: currentReport })
+        currentReport = blobResult.report
+        publisherResults.push(blobResult.publisherResult)
+        continue
       }
 
       publisherResults.push({
         publisher,
-        ok: true,
+        status: 'ok',
       })
     } catch (unknownError) {
       const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
       publisherResults.push({
         publisher,
-        ok: false,
+        status: 'failed',
         detail: error.message,
       })
     }
@@ -44,7 +47,7 @@ export async function publishReport(options: PublishReportOptions) {
         ...publisherResults,
         {
           publisher: 'file',
-          ok: true,
+          status: 'ok',
         },
       ],
     })

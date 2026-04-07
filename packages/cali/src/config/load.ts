@@ -5,10 +5,15 @@ import path from 'node:path'
 import { cosmiconfig } from 'cosmiconfig'
 
 import type { CommandResolvedConfig } from '../runtime/types.js'
-import type { CommandConfigKey, CommandId } from '../runtime/types.js'
-import { commandConfigKeyFromId } from '../runtime/types.js'
+import type { CommandConfigKey } from '../runtime/types.js'
 import { asArray, resolveFromCwd, uniqueStrings } from '../utils.js'
-import type { CaliCommandConfig, CaliConfig, CaliEnvName, PublisherName } from './schema.js'
+import type {
+  CaliCommandConfig,
+  CaliConfig,
+  CaliEnvName,
+  CommandId,
+  PublisherName,
+} from './schema.js'
 import { CaliConfigSchema, normalizeCaliEnvName } from './schema.js'
 
 type LoadCommandConfigOptions = {
@@ -25,7 +30,7 @@ function getBuiltInSkillPaths(cwd: string) {
 
 const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
   'mobile-pr': {
-    enabledToolPacks: ['skills', 'agent-device', 'report'],
+    enabledToolPacks: ['skills', 'agent-device'],
     outputPublishers: ['blob', 'file'],
     extraInstructions: [
       'Infer concise acceptance criteria from pull request or task metadata and prioritize user-visible flows.',
@@ -33,7 +38,7 @@ const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
     ],
   },
   'local-ios': {
-    enabledToolPacks: ['skills', 'agent-device', 'report'],
+    enabledToolPacks: ['skills', 'agent-device'],
     outputPublishers: ['blob', 'file'],
     mobileDefaults: {
       platform: 'ios',
@@ -43,7 +48,7 @@ const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
     ],
   },
   'local-android': {
-    enabledToolPacks: ['skills', 'agent-device', 'report'],
+    enabledToolPacks: ['skills', 'agent-device'],
     outputPublishers: ['blob', 'file'],
     mobileDefaults: {
       platform: 'android',
@@ -77,7 +82,7 @@ function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): Cali
       switch (envName) {
         case 'mobile-pr':
           return {
-            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read', 'report'],
+            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
             outputPublishers: mobileOutputPublishers,
             extraInstructions: [
               'Focus on high-signal runtime performance evidence such as rerenders, slow interactions, and component-level bottlenecks.',
@@ -85,7 +90,7 @@ function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): Cali
           }
         case 'local-ios':
           return {
-            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read', 'report'],
+            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
             outputPublishers: mobileOutputPublishers,
             mobileDefaults: {
               platform: 'ios',
@@ -94,7 +99,7 @@ function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): Cali
         case 'local-android':
         default:
           return {
-            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read', 'report'],
+            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
             outputPublishers: mobileOutputPublishers,
             mobileDefaults: {
               platform: 'android',
@@ -103,15 +108,22 @@ function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): Cali
       }
     case 'review':
       return {
-        enabledToolPacks: ['repo-read', 'github', 'skills', 'report'],
+        enabledToolPacks: ['repo-read', 'skills'],
         outputPublishers: commonOutputPublishers,
       }
     case 'dev':
       return {
-        enabledToolPacks: ['repo-read', 'repo-write', 'github', 'skills', 'report'],
+        enabledToolPacks: ['repo-read', 'repo-write', 'skills'],
         outputPublishers: commonOutputPublishers,
       }
   }
+}
+
+const COMMAND_CONFIG_KEYS: Record<CommandId, CommandConfigKey> = {
+  qa: 'qa',
+  review: 'review',
+  'perf-review': 'perfReview',
+  dev: 'dev',
 }
 
 function getCommandConfig(config: CaliConfig, key: CommandConfigKey): CaliCommandConfig {
@@ -169,7 +181,7 @@ export async function loadCommandConfig(
   const fileConfig = await loadCaliConfigFile(cwd, configPath)
   const envName = cliEnvName ?? normalizeCaliEnvName(fileConfig.env) ?? getDefaultEnvName(commandId)
   const envDefaults = getEnvCommandDefaults(commandId, envName)
-  const commandConfig = getCommandConfig(fileConfig, commandConfigKeyFromId(commandId))
+  const commandConfig = getCommandConfig(fileConfig, COMMAND_CONFIG_KEYS[commandId])
   const merged = mergeCommandConfig(envDefaults, commandConfig)
 
   return {
@@ -179,7 +191,7 @@ export async function loadCommandConfig(
       : undefined,
     contextPath: merged.contextPath ? resolveFromCwd(cwd, merged.contextPath) : undefined,
     skillPaths: uniqueStrings([...(fileConfig.skillPaths ?? []), ...getBuiltInSkillPaths(cwd)]),
-    enabledToolPacks: merged.enabledToolPacks ?? ['report'],
+    enabledToolPacks: merged.enabledToolPacks ?? [],
     outputPublishers: merged.outputPublishers ?? ['file'],
     extraInstructions: asArray(merged.extraInstructions),
     model:

@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
 
+import { DOCS_URLS } from './docs.js'
 import type { CaliPlatform } from './runtime/types.js'
 
 const execFile = promisify(execFileCallback)
@@ -88,7 +89,12 @@ export async function ensureCommandExists(commandName: string, installHint: stri
   }
 
   throw new Error(
-    `Missing required CLI: ${commandName}\n\nInstall it before running Cali:\n${installHint}`
+    [
+      `Missing required CLI: ${commandName}`,
+      'Install it before running Cali:',
+      installHint,
+      `Docs: ${DOCS_URLS.requiredClis}`,
+    ].join('\n\n')
   )
 }
 

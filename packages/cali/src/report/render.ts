@@ -1,10 +1,4 @@
-import type {
-  CommandReport,
-  DevReport,
-  PerfReviewReport,
-  QaReport,
-  ReviewReport,
-} from './types.js'
+import type { CommandReport, DevReport, PerfReviewReport, QaReport, ReviewReport } from './types.js'
 
 function appendList(lines: string[], title: string, values: string[], empty: string) {
   lines.push('', title)
@@ -43,6 +37,21 @@ function appendMetadata(lines: string[], report: CommandReport) {
 
   if (report.context.build?.workflowUrl) {
     lines.push(`- Workflow: ${report.context.build.workflowUrl}`)
+  }
+}
+
+function appendPublishers(lines: string[], report: CommandReport) {
+  lines.push('', '### Publishers')
+
+  if (!report.publisherResults || report.publisherResults.length === 0) {
+    lines.push('- No publisher results recorded.')
+    return
+  }
+
+  for (const publisherResult of report.publisherResults) {
+    lines.push(
+      `- ${publisherResult.publisher}: ${publisherResult.status}${publisherResult.detail ? ` (${publisherResult.detail})` : ''}`
+    )
   }
 }
 
@@ -187,6 +196,7 @@ export function renderCommandSection(report: CommandReport) {
     report.environmentNotes ?? [],
     '- No environment notes recorded.'
   )
+  appendPublishers(lines, report)
   appendMetadata(lines, report)
   appendJsonReport(lines, report)
 

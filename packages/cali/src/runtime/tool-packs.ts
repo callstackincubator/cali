@@ -1,6 +1,5 @@
 import type { ToolPackName } from '../config/schema.js'
 import { createAgentDeviceToolPack } from '../tools/agent-device.js'
-import { createGitHubToolPack } from '../tools/github.js'
 import { createReactDevtoolsToolPack } from '../tools/react-devtools.js'
 import { createRepoReadToolPack, createRepoWriteToolPack } from '../tools/repo.js'
 import {
@@ -12,6 +11,7 @@ import {
   type RequiredSkillDocument,
   type SkillMetadata,
 } from '../tools/skills.js'
+import { ensureCommandExists } from '../utils.js'
 import type { CaliContext, ToolTraceEntry } from './types.js'
 
 type PrepareToolPacksOptions = {
@@ -28,6 +28,7 @@ type ToolPackState = {
 
 type ToolPackDefinition = {
   requiredSkills?: RequiredSkillDocument[]
+  ensureAvailable?: () => Promise<void>
   createTools?: (context: {
     context: CaliContext
     workspaceRoot: string
@@ -42,6 +43,7 @@ const TOOL_PACK_DEFINITIONS: Record<ToolPackName, ToolPackDefinition> = {
     createTools: ({ skills }) => createSkillsToolPack(skills),
   },
   'agent-device': {
+    ensureAvailable: () => ensureCommandExists('agent-device', 'npm i -g agent-device'),
     requiredSkills: [
       {
         name: 'agent-device',
@@ -55,19 +57,27 @@ const TOOL_PACK_DEFINITIONS: Record<ToolPackName, ToolPackDefinition> = {
       }),
   },
   'repo-read': {
+    ensureAvailable: async () => {
+      await ensureCommandExists('git', 'Install Git and make sure `git` is on PATH.')
+      await ensureCommandExists('rg', 'Install ripgrep and make sure `rg` is on PATH.')
+    },
     createTools: ({ workspaceRoot }) => createRepoReadToolPack({ workspaceRoot }),
   },
   'repo-write': {
+    ensureAvailable: () =>
+      ensureCommandExists(
+        'zsh',
+        'Install zsh and make sure `zsh` is on PATH for repository commands.'
+      ),
     createTools: ({ workspaceRoot, context }) =>
       createRepoWriteToolPack({
         workspaceRoot,
         allowedCommands: context.dev?.allowedValidations ?? [],
       }),
   },
-  github: {
-    createTools: ({ context }) => createGitHubToolPack({ context }),
-  },
   'react-devtools': {
+    ensureAvailable: () =>
+      ensureCommandExists('agent-react-devtools', 'npm i -g agent-react-devtools'),
     requiredSkills: [
       {
         name: 'react-devtools',
@@ -76,7 +86,6 @@ const TOOL_PACK_DEFINITIONS: Record<ToolPackName, ToolPackDefinition> = {
     ],
     createTools: ({ state }) => createReactDevtoolsToolPack({ trace: state.reactDevtoolsTrace }),
   },
-  report: {},
 }
 
 export async function prepareToolPacks(options: PrepareToolPacksOptions) {
@@ -85,6 +94,11 @@ export async function prepareToolPacks(options: PrepareToolPacksOptions) {
     throw new Error('agent-device tool pack requires a bound session name.')
   }
   const skills = await discoverSkills(skillPaths)
+  await Promise.all(
+    enabledToolPacks.map(async (toolPackName) => {
+      await TOOL_PACK_DEFINITIONS[toolPackName].ensureAvailable?.()
+    })
+  )
   const state: ToolPackState = {
     agentDeviceTrace: [],
     reactDevtoolsTrace: [],

@@ -7,6 +7,14 @@ import { loadCommandConfig } from '../config/load.js'
 import type { ToolPackName } from '../config/schema.js'
 import type { CommandReport } from '../report/types.js'
 import { resolveCommandContext } from '../runtime/context.js'
+import {
+  bootstrapMobileApp,
+  closeAgentDeviceSession,
+  createAgentDeviceSessionName,
+  listScreenshots,
+  prepareMobileOutputDirectories,
+  resolveMobileRuntimeContext,
+} from '../runtime/mobile.js'
 import { publishReport } from '../runtime/publishers.js'
 import { prepareToolPacks } from '../runtime/tool-packs.js'
 import type {
@@ -14,6 +22,8 @@ import type {
   CommandCliOptions,
   CommandId,
   CommandResolvedConfig,
+  MobileCommandRuntimeContext,
+  ToolTraceEntry,
 } from '../runtime/types.js'
 import { resolveFromCwd } from '../utils.js'
 
@@ -202,6 +212,119 @@ export async function runStructuredCommand<TReportInput, TReport extends Command
     model: config.model,
     context,
     reportInput,
+  })
+
+  printPhase('Publishing report', config.outputPublishers.join(', '))
+  const publishedReport = await publishReport({
+    report,
+    publishers: config.outputPublishers,
+  })
+
+  printFinalReport(cwd, commandId, reportLabel, publishedReport)
+}
+
+type MobileRoleRunArgs<TReportInput> = RoleRunArgs & {
+  mobileContext: MobileCommandRuntimeContext
+}
+
+type RunMobileStructuredCommandOptions<TReportInput, TReport extends CommandReport> = {
+  commandId: 'qa' | 'perf-review'
+  cli: CommandCliOptions
+  roleLabel: string
+  reportLabel: string
+  createBlockedReport: (summary: string) => TReportInput
+  composeReport: (args: {
+    model: string
+    context: CaliContext
+    reportInput: TReportInput
+    mobileContext?: MobileCommandRuntimeContext
+    traces: {
+      agentDeviceTrace: ToolTraceEntry[]
+      reactDevtoolsTrace: ToolTraceEntry[]
+    }
+  }) => Promise<TReport> | TReport
+  runRole: (args: MobileRoleRunArgs<TReportInput>) => Promise<{ reportInput: TReportInput }>
+}
+
+export async function runMobileStructuredCommand<TReportInput, TReport extends CommandReport>(
+  options: RunMobileStructuredCommandOptions<TReportInput, TReport>
+) {
+  const { commandId, cli, roleLabel, reportLabel, createBlockedReport, composeReport, runRole } =
+    options
+  const { cwd, config, context } = await loadRunContext(commandId, cli)
+
+  let reportInput: TReportInput
+  let mobileContext: MobileCommandRuntimeContext | undefined
+  let sessionName: string | undefined
+  let traces: {
+    agentDeviceTrace: ToolTraceEntry[]
+    reactDevtoolsTrace: ToolTraceEntry[]
+  } = {
+    agentDeviceTrace: [],
+    reactDevtoolsTrace: [],
+  }
+
+  try {
+    mobileContext = await resolveMobileRuntimeContext(commandId, config.envName, context)
+    sessionName = createAgentDeviceSessionName(mobileContext.platform)
+
+    printPhase(
+      'Preparing output',
+      `${mobileContext.platform} | ${mobileContext.deviceName ?? 'bound device'} | ${mobileContext.appId}`
+    )
+    await prepareMobileOutputDirectories(mobileContext)
+
+    printPhase('Bootstrapping app', mobileContext.artifactPath)
+    await bootstrapMobileApp(commandId, config.envName, mobileContext, sessionName)
+    printPhase('Bootstrap complete')
+
+    printPhase('Preparing tool packs', config.enabledToolPacks.join(', '))
+    const preparedToolPacks = await prepareToolPacks({
+      context,
+      skillPaths: config.skillPaths,
+      enabledToolPacks: config.enabledToolPacks,
+      sessionName,
+    })
+    traces = preparedToolPacks.traces
+
+    printPhase(`Running ${roleLabel} agent`, config.model)
+    const result = await runRole({
+      context,
+      mobileContext,
+      modelId: config.model,
+      tools: {
+        ...preparedToolPacks.tools,
+        get_run_context: createRunContextTool(commandId, context),
+      },
+      availableSkillsPrompt: preparedToolPacks.availableSkillsPrompt,
+      preloadedSkillsPrompt: preparedToolPacks.preloadedSkillsPrompt,
+      extraInstructions: config.extraInstructions,
+      prompt: cli.prompt,
+      onAgentStep: (event) => {
+        printPhase(`${roleLabel} step complete`, formatAgentStepDetail(event))
+      },
+      onAgentFinish: (event) => {
+        printPhase(`${roleLabel} agent finished`, formatAgentFinishDetail(event))
+      },
+    })
+
+    reportInput = result.reportInput
+  } catch (unknownError) {
+    const error = unknownError instanceof Error ? unknownError : new Error(String(unknownError))
+    printPhase('Run blocked', summarizeReason(error.message))
+    reportInput = createBlockedReport(error.message)
+  } finally {
+    if (sessionName) {
+      await closeAgentDeviceSession(sessionName)
+    }
+  }
+
+  const report = await composeReport({
+    model: config.model,
+    context,
+    reportInput,
+    mobileContext,
+    traces,
   })
 
   printPhase('Publishing report', config.outputPublishers.join(', '))

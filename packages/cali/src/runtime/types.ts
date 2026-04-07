@@ -1,21 +1,6 @@
-import type { CaliEnvName, PublisherName, ToolPackName } from '../config/schema.js'
-
-export const COMMAND_IDS = ['qa', 'review', 'perf-review', 'dev'] as const
-
-export type CommandId = (typeof COMMAND_IDS)[number]
-
+import type { CaliEnvName, CommandId, PublisherName, ToolPackName } from '../config/schema.js'
+export type { CommandId } from '../config/schema.js'
 export type CommandConfigKey = 'qa' | 'review' | 'perfReview' | 'dev'
-
-export function commandConfigKeyFromId(commandId: CommandId): CommandConfigKey {
-  switch (commandId) {
-    case 'perf-review':
-      return 'perfReview'
-    case 'qa':
-    case 'review':
-    case 'dev':
-      return commandId
-  }
-}
 
 export type CaliPlatform = 'android' | 'ios'
 
