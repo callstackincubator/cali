@@ -27,6 +27,39 @@ function summarizeReason(text: string) {
     .find(Boolean)
 }
 
+function formatAgentStepDetail(event: {
+  stepNumber: number
+  finishReason: string
+  toolNames: string[]
+  totalTokens?: number
+}) {
+  const details = [`step ${event.stepNumber}`, `finish=${event.finishReason}`]
+
+  if (event.toolNames.length > 0) {
+    details.push(`tools=${event.toolNames.join(',')}`)
+  }
+
+  if (event.totalTokens != null) {
+    details.push(`tokens=${event.totalTokens}`)
+  }
+
+  return details.join(' | ')
+}
+
+function formatAgentFinishDetail(event: {
+  stepCount: number
+  finishReason: string
+  totalTokens?: number
+}) {
+  const details = [`steps=${event.stepCount}`, `finish=${event.finishReason}`]
+
+  if (event.totalTokens != null) {
+    details.push(`tokens=${event.totalTokens}`)
+  }
+
+  return details.join(' | ')
+}
+
 async function resolveEnvironmentContext(
   cwd: string,
   cli: QaCliOptions
@@ -266,6 +299,12 @@ export async function runQaCommand(cli: QaCliOptions) {
       enabledToolPacks: config.enabledToolPacks,
       extraInstructions: config.extraInstructions,
       prompt: cli.prompt,
+      onAgentStep: (event) => {
+        printPhase('QA agent step complete', formatAgentStepDetail(event))
+      },
+      onAgentFinish: (event) => {
+        printPhase('QA agent finished', formatAgentFinishDetail(event))
+      },
     })
 
     reportInput = roleResult.reportInput

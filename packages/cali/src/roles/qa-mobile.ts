@@ -20,6 +20,13 @@ type RunQaMobileRoleOptions = {
   enabledToolPacks: string[]
   extraInstructions: string[]
   prompt?: string
+  onAgentStep?: (event: {
+    stepNumber: number
+    finishReason: string
+    toolNames: string[]
+    totalTokens?: number
+  }) => void
+  onAgentFinish?: (event: { stepCount: number; finishReason: string; totalTokens?: number }) => void
 }
 
 type QaMobileRoleResult = {
@@ -159,8 +166,17 @@ async function synthesizeReportInput(
 export async function runQaMobileRole(
   options: RunQaMobileRoleOptions
 ): Promise<QaMobileRoleResult> {
-  const { context, modelId, sessionName, skillPaths, enabledToolPacks, extraInstructions, prompt } =
-    options
+  const {
+    context,
+    modelId,
+    sessionName,
+    skillPaths,
+    enabledToolPacks,
+    extraInstructions,
+    prompt,
+    onAgentStep,
+    onAgentFinish,
+  } = options
   const skills = await discoverSkills(skillPaths)
   const agentDeviceTrace: AgentDeviceTraceEntry[] = []
   let reportInput: QaReportInput | undefined
@@ -216,6 +232,13 @@ export async function runQaMobileRole(
     tools,
     toolChoice: 'required',
     stopWhen: stepCountIs(MAX_AGENT_STEPS),
+    onFinish: async ({ steps, finishReason, totalUsage }) => {
+      onAgentFinish?.({
+        stepCount: steps.length,
+        finishReason,
+        totalTokens: totalUsage.totalTokens,
+      })
+    },
     prepareStep: async ({ steps, stepNumber }) => {
       const hasWrittenReport = hasToolActivity(steps, 'write_report')
       const hasUsedDeviceTools = hasToolActivity(steps, 'agent_device')
@@ -238,6 +261,14 @@ export async function runQaMobileRole(
 
   const result = await agent.generate({
     prompt: buildPrompt(context, skills, extraInstructions, prompt),
+    onStepFinish: async ({ stepNumber, finishReason, toolCalls, usage }) => {
+      onAgentStep?.({
+        stepNumber: stepNumber + 1,
+        finishReason,
+        toolNames: toolCalls.map((toolCall) => toolCall.toolName),
+        totalTokens: usage.totalTokens,
+      })
+    },
   })
 
   if (!reportInput) {
