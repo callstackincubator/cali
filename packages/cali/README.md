@@ -195,7 +195,7 @@ npm i -g agent-react-devtools
 
 On macOS/Linux, Git and `zsh` are usually present already. Install ripgrep if `rg` is missing.
 
-If you want Android app id inference from an `.apk` without passing `--app-id`, make sure either `apkanalyzer` or `aapt` is on `PATH`.
+If you want Android app id inference from an `.apk` without passing `--app-id`, Cali now reads `AndroidManifest.xml` directly from the archive. It can also fall back to SDK `aapt` when the manifest is not readable.
 
 If one of these is missing, Cali stops with an actionable error instead of trying to install it automatically.
 

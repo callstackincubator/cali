@@ -1,6 +1,6 @@
 import { hasToolCall, stepCountIs, tool, ToolLoopAgent } from 'ai'
-import { z } from 'zod'
 import type { ZodType } from 'zod'
+import { z } from 'zod'
 
 import { createQaAgentModel } from '../model.js'
 
@@ -70,7 +70,7 @@ export async function runToolLoopRole<TOutput>(options: RunToolLoopRoleOptions<T
         totalTokens: totalUsage.totalTokens,
       })
     },
-    prepareStep: async ({ steps, stepNumber }) => {
+    prepareStep: async ({ stepNumber }) => {
       if (!reserveReportAfterTool || reportInput) {
         return {}
       }
@@ -86,7 +86,7 @@ export async function runToolLoopRole<TOutput>(options: RunToolLoopRoleOptions<T
     },
   })
 
-  const result = await agent.generate({
+  await agent.generate({
     prompt,
     onStepFinish: async ({ stepNumber, finishReason, toolCalls, usage }) => {
       if (

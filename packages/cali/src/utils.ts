@@ -13,17 +13,19 @@ type CommandResult = {
   exitCode: number
   stdout: string
   stderr: string
+  stdoutBuffer?: Buffer
 }
 
 type CommandOptions = {
   cwd?: string
   env?: NodeJS.ProcessEnv
   allowFailure?: boolean
+  binaryStdout?: boolean
 }
 
 type ExecFileError = Error & {
-  stdout?: string
-  stderr?: string
+  stdout?: string | Buffer
+  stderr?: string | Buffer
   status?: number | null
   code?: number | string
 }
@@ -35,25 +37,52 @@ export async function runCommand(
   args: string[],
   options: CommandOptions = {}
 ): Promise<CommandResult> {
-  const { cwd = process.cwd(), env = process.env, allowFailure = false } = options
+  const {
+    cwd = process.cwd(),
+    env = process.env,
+    allowFailure = false,
+    binaryStdout = false,
+  } = options
 
   try {
     const result = await execFile(file, args, {
       cwd,
       env,
       maxBuffer: 20 * 1024 * 1024,
+      encoding: binaryStdout ? null : 'utf8',
     })
+    const stdoutBuffer = Buffer.isBuffer(result.stdout)
+      ? result.stdout
+      : Buffer.from(result.stdout ?? '', 'utf8')
+    const stdout = Buffer.isBuffer(result.stdout)
+      ? stdoutBuffer.toString('utf8')
+      : (result.stdout ?? '')
+    const stderr = Buffer.isBuffer(result.stderr)
+      ? result.stderr.toString('utf8')
+      : (result.stderr ?? '')
 
     return {
       ok: true,
       exitCode: 0,
-      stdout: result.stdout ?? '',
-      stderr: result.stderr ?? '',
+      stdout,
+      stderr,
+      stdoutBuffer,
     }
   } catch (unknownError) {
     const error = unknownError as ExecFileError
-    const stdout = typeof error.stdout === 'string' ? error.stdout : ''
-    const stderr = typeof error.stderr === 'string' ? error.stderr : error.message
+    const stdoutBuffer = Buffer.isBuffer(error.stdout) ? error.stdout : undefined
+    const stdout =
+      typeof error.stdout === 'string'
+        ? error.stdout
+        : stdoutBuffer
+          ? stdoutBuffer.toString('utf8')
+          : ''
+    const stderr =
+      typeof error.stderr === 'string'
+        ? error.stderr
+        : Buffer.isBuffer(error.stderr)
+          ? error.stderr.toString('utf8')
+          : error.message
     const exitCode =
       typeof error.status === 'number'
         ? error.status
@@ -72,6 +101,7 @@ export async function runCommand(
       exitCode,
       stdout,
       stderr,
+      stdoutBuffer,
     }
   }
 }

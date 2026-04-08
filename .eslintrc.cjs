@@ -3,6 +3,7 @@ module.exports = {
     es6: true,
     node: true,
   },
+  ignorePatterns: ['dist/**', 'packages/*/dist/**'],
   plugins: ['import', 'simple-import-sort'],
   extends: ['eslint:recommended'],
   parserOptions: {

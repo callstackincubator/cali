@@ -1,4 +1,4 @@
-import type { CaliEnvName, CommandId, PublisherName, ToolPackName } from '../config/schema.js'
+import type { CaliEnvName, PublisherName, ToolPackName } from '../config/schema.js'
 export type { CommandId } from '../config/schema.js'
 export type CommandConfigKey = 'qa' | 'review' | 'perfReview' | 'dev'
 

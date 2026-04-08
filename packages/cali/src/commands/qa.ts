@@ -1,7 +1,7 @@
 import type { QaReport, QaReportInput, ScreenshotInfo } from '../report/types.js'
 import { runQaMobileRole } from '../roles/qa-mobile.js'
-import type { CommandCliOptions } from '../runtime/types.js'
 import { listScreenshots } from '../runtime/mobile.js'
+import type { CommandCliOptions } from '../runtime/types.js'
 import { humanizeScreenshotLabel } from '../utils.js'
 import { runMobileStructuredCommand } from './shared.js'
 

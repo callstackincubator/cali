@@ -11,7 +11,6 @@ import {
   bootstrapMobileApp,
   closeAgentDeviceSession,
   createAgentDeviceSessionName,
-  listScreenshots,
   prepareMobileOutputDirectories,
   resolveMobileRuntimeContext,
 } from '../runtime/mobile.js'
@@ -223,7 +222,7 @@ export async function runStructuredCommand<TReportInput, TReport extends Command
   printFinalReport(cwd, commandId, reportLabel, publishedReport)
 }
 
-type MobileRoleRunArgs<TReportInput> = RoleRunArgs & {
+type MobileRoleRunArgs = RoleRunArgs & {
   mobileContext: MobileCommandRuntimeContext
 }
 
@@ -243,7 +242,7 @@ type RunMobileStructuredCommandOptions<TReportInput, TReport extends CommandRepo
       reactDevtoolsTrace: ToolTraceEntry[]
     }
   }) => Promise<TReport> | TReport
-  runRole: (args: MobileRoleRunArgs<TReportInput>) => Promise<{ reportInput: TReportInput }>
+  runRole: (args: MobileRoleRunArgs) => Promise<{ reportInput: TReportInput }>
 }
 
 export async function runMobileStructuredCommand<TReportInput, TReport extends CommandReport>(
