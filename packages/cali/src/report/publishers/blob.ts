@@ -45,6 +45,13 @@ export async function publishBlobReport({
 
   const screenshots = await Promise.all(
     report.screenshots.map(async (screenshot) => {
+      if (!screenshot.absolutePath) {
+        return {
+          ...screenshot,
+          uploadError: 'Screenshot path is not available for blob upload.',
+        }
+      }
+
       try {
         const fileBuffer = await readFile(screenshot.absolutePath)
         const pathnameParts = [

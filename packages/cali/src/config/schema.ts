@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const CaliEnvNameSchema = z.enum(['mobile-pr', 'local-android', 'local-ios'])
+const CaliEnvNameSchema = z.enum(['mobile-pr', 'eas-mobile-pr', 'local-android', 'local-ios'])
 const ToolPackNameSchema = z.enum([
   'skills',
   'agent-device',

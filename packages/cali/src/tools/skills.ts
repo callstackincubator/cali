@@ -4,6 +4,8 @@ import path from 'node:path'
 import { tool } from 'ai'
 import { z } from 'zod'
 
+import { DOCS_URLS } from '../docs.js'
+
 type SkillMetadata = {
   name: string
   description: string
@@ -21,6 +23,13 @@ type PreloadedSkillDocument = {
 type RequiredSkillDocument = {
   name: string
   preloadPaths: string[]
+}
+
+const SKILL_INSTALL_HINTS: Record<string, string> = {
+  'agent-device':
+    'npx skills add callstackincubator/agent-device --agent codex --skill agent-device -y',
+  'react-devtools':
+    'npx skills add callstackincubator/agent-skills --agent codex --skill react-devtools -y',
 }
 
 function parseSkillFile(content: string) {
@@ -69,7 +78,17 @@ function resolveSkillFilePath(skill: SkillMetadata, relativeFilePath: string) {
 function findSkill(skills: SkillMetadata[], name: string) {
   const skill = skills.find((candidate) => candidate.name.toLowerCase() === name.toLowerCase())
   if (!skill) {
-    throw new Error(`Skill not found: ${name}`)
+    const installHint = SKILL_INSTALL_HINTS[name]
+    throw new Error(
+      [
+        `Skill not found: ${name}`,
+        installHint ? 'Install it before running Cali:' : undefined,
+        installHint,
+        `Docs: ${DOCS_URLS.requiredSkills}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    )
   }
 
   return skill

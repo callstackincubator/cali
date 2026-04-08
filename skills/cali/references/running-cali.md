@@ -22,6 +22,7 @@ Use this reference for normal Cali usage, setup, and CI wiring.
 Built-in envs:
 
 - `mobile-pr`
+- `eas-mobile-pr`
 - `local-android`
 - `local-ios`
 
@@ -57,6 +58,16 @@ node packages/cali/dist/index.js qa \
 node packages/cali/dist/index.js qa \
   --env mobile-pr \
   --context ./cali-context.json
+
+# Generate CI context
+node packages/cali/dist/index.js write-mobile-pr-context \
+  --from eas \
+  --output ./cali-context.json
+
+# Render a compact GitHub comment
+node packages/cali/dist/index.js render-comment \
+  --report ./artifacts/qa/report.json \
+  --format github
 ```
 
 ## Provider setup
@@ -81,6 +92,7 @@ QA_MODEL=anthropic/claude-sonnet-4.6
 
 - Generate `cali-context.json` before invoking Cali.
 - Do not assume Cali will scrape PR/build metadata from the environment at runtime.
+- Prefer the built-in `write-mobile-pr-context` command over custom `jq` wrappers.
 - For copy-pasteable CI examples, use:
   - [`packages/cali/examples/github-actions/write-mobile-pr-context.sh`](../../../packages/cali/examples/github-actions/write-mobile-pr-context.sh)
   - [`packages/cali/examples/eas-workflows/write-mobile-pr-context.sh`](../../../packages/cali/examples/eas-workflows/write-mobile-pr-context.sh)

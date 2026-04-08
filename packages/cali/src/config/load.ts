@@ -28,13 +28,24 @@ function getBuiltInSkillPaths(cwd: string) {
   return [path.join(cwd, '.agents', 'skills'), path.join(homedir(), '.agents', 'skills')]
 }
 
+const MOBILE_PR_QA_DEFAULTS: CaliCommandConfig = {
+  enabledToolPacks: ['skills', 'agent-device'],
+  outputPublishers: ['blob', 'file'],
+  extraInstructions: [
+    'Infer concise acceptance criteria from pull request or task metadata and prioritize user-visible flows.',
+    'Treat the repository as a black box and avoid source inspection unless the config explicitly says otherwise.',
+  ],
+}
+
 const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
   'mobile-pr': {
-    enabledToolPacks: ['skills', 'agent-device'],
-    outputPublishers: ['blob', 'file'],
+    ...MOBILE_PR_QA_DEFAULTS,
+  },
+  'eas-mobile-pr': {
+    ...MOBILE_PR_QA_DEFAULTS,
     extraInstructions: [
-      'Infer concise acceptance criteria from pull request or task metadata and prioritize user-visible flows.',
-      'Treat the repository as a black box and avoid source inspection unless the config explicitly says otherwise.',
+      ...asArray(MOBILE_PR_QA_DEFAULTS.extraInstructions),
+      'This run is expected to execute in EAS-style CI with explicit context generated before Cali starts.',
     ],
   },
   'local-ios': {
@@ -81,6 +92,7 @@ function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): Cali
     case 'perf-review':
       switch (envName) {
         case 'mobile-pr':
+        case 'eas-mobile-pr':
           return {
             enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
             outputPublishers: mobileOutputPublishers,

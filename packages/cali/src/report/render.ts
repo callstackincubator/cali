@@ -55,10 +55,6 @@ function appendPublishers(lines: string[], report: CommandReport) {
   }
 }
 
-function appendJsonReport(lines: string[], report: CommandReport) {
-  lines.push('', '### JSON Report', '', '```json', JSON.stringify(report, null, 2), '```')
-}
-
 function renderHeader(title: string, report: CommandReport) {
   return [
     title,
@@ -198,7 +194,6 @@ export function renderCommandSection(report: CommandReport) {
   )
   appendPublishers(lines, report)
   appendMetadata(lines, report)
-  appendJsonReport(lines, report)
 
   return `${lines.join('\n')}\n`
 }

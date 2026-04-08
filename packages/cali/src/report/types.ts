@@ -9,7 +9,7 @@ export type ScreenshotLabel = {
 
 export type ScreenshotInfo = {
   fileName: string
-  absolutePath: string
+  absolutePath?: string
   bytes: number
   label: string
   blobUrl?: string

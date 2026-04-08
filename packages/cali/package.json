@@ -12,6 +12,7 @@
     "qa:env:local:android": "node ./dist/index.js qa --env local-android",
     "qa:env:local:ios": "node ./dist/index.js qa --env local-ios",
     "qa:env:mobile-pr": "node ./dist/index.js qa --env mobile-pr",
+    "qa:env:eas-mobile-pr": "node ./dist/index.js qa --env eas-mobile-pr",
     "review": "node ./dist/index.js review",
     "review:env:mobile-pr": "node ./dist/index.js review --env mobile-pr",
     "perf-review": "node ./dist/index.js perf-review",
@@ -22,9 +23,13 @@
     "dev:qa:env:local:android": "node --import=tsx ./src/cli.ts qa --env local-android",
     "dev:qa:env:local:ios": "node --import=tsx ./src/cli.ts qa --env local-ios",
     "dev:qa:env:mobile-pr": "node --import=tsx ./src/cli.ts qa --env mobile-pr",
+    "dev:qa:env:eas-mobile-pr": "node --import=tsx ./src/cli.ts qa --env eas-mobile-pr",
     "dev:review": "node --import=tsx ./src/cli.ts review",
     "dev:perf-review": "node --import=tsx ./src/cli.ts perf-review",
-    "dev:dev-command": "node --import=tsx ./src/cli.ts dev"
+    "dev:dev-command": "node --import=tsx ./src/cli.ts dev",
+    "write-context:eas": "node ./dist/index.js write-mobile-pr-context --from eas",
+    "write-context:gha": "node ./dist/index.js write-mobile-pr-context --from github-actions",
+    "render-comment": "node ./dist/index.js render-comment --format github"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

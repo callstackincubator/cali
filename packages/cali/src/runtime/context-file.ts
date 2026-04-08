@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 
 import { resolveFromCwd } from '../utils.js'
+import { parseRepositoryUrl, sanitizeUrl } from './context-repo.js'
 import type { CaliContext } from './types.js'
 
 const LabelsSchema = z.array(z.string()).optional()
@@ -13,6 +14,7 @@ const RepositorySchema = z
     owner: z.string().optional(),
     name: z.string().optional(),
     cloneUrl: z.string().optional(),
+    webUrl: z.string().optional(),
     defaultBranch: z.string().optional(),
     currentBranch: z.string().optional(),
     commitSha: z.string().optional(),
@@ -73,6 +75,10 @@ function normalizeLabels(values: string[] | undefined) {
   return values ?? []
 }
 
+function sanitizeContextUrl(value: string | undefined) {
+  return sanitizeUrl(value, { stripQuery: true })
+}
+
 function resolveOptionalPath(cwd: string, value?: string) {
   return value ? resolveFromCwd(cwd, value) : undefined
 }
@@ -113,16 +119,32 @@ function createContextFileSchema(cwd: string) {
     .transform(
       (parsed): Partial<CaliContext> => ({
         workspaceRoot: resolveOptionalPath(cwd, parsed.workspaceRoot),
-        repository: parsed.repository,
+        repository: parsed.repository
+          ? (() => {
+              const parsedFromCloneUrl = parseRepositoryUrl(sanitizeUrl(parsed.repository.cloneUrl))
+
+              return {
+                provider: parsed.repository.provider ?? parsedFromCloneUrl.provider,
+                owner: parsed.repository.owner ?? parsedFromCloneUrl.owner,
+                name: parsed.repository.name ?? parsedFromCloneUrl.name,
+                webUrl: sanitizeUrl(parsed.repository.webUrl ?? parsedFromCloneUrl.webUrl),
+                defaultBranch: parsed.repository.defaultBranch,
+                currentBranch: parsed.repository.currentBranch,
+                commitSha: parsed.repository.commitSha,
+              }
+            })()
+          : undefined,
         task: parsed.task
           ? {
               ...parsed.task,
+              url: sanitizeContextUrl(parsed.task.url),
               labels: normalizeLabels(parsed.task.labels),
             }
           : undefined,
         pullRequest: parsed.pullRequest
           ? {
               ...parsed.pullRequest,
+              url: sanitizeContextUrl(parsed.pullRequest.url),
               labels: normalizeLabels(parsed.pullRequest.labels),
               isDraft: parsed.pullRequest.isDraft ?? false,
             }
@@ -133,7 +155,13 @@ function createContextFileSchema(cwd: string) {
               artifactPath: resolveOptionalPath(cwd, parsed.mobile.artifactPath),
             }
           : undefined,
-        build: parsed.build,
+        build: parsed.build
+          ? {
+              id: parsed.build.id,
+              workflowUrl: sanitizeContextUrl(parsed.build.workflowUrl),
+              logsUrl: sanitizeContextUrl(parsed.build.logsUrl),
+            }
+          : undefined,
         output: {
           outputDir: resolveOptionalPath(cwd, parsed.output?.outputDir),
           screenshotsDir: resolveOptionalPath(cwd, parsed.output?.screenshotsDir),

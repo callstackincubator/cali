@@ -3,7 +3,7 @@
 Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It runs first-class agent commands on top of a shared runtime model:
 
 - commands: `qa`, `review`, `perf-review`, `dev`
-- envs: `mobile-pr`, `local-android`, `local-ios`
+- envs: `mobile-pr`, `eas-mobile-pr`, `local-android`, `local-ios`
 - one shared `cali-context.json` runtime contract
 - explicit tool packs per command
 - publisher-based outputs
@@ -39,6 +39,7 @@ All commands use one shared `cali-context.json` contract. Commands only require 
     "provider": "github.com",
     "owner": "acme",
     "name": "mobile-app",
+    "webUrl": "https://github.com/acme/mobile-app",
     "defaultBranch": "main",
     "currentBranch": "feature/onboarding-copy"
   },
@@ -83,6 +84,8 @@ All commands use one shared `cali-context.json` contract. Commands only require 
 
 Flags always win over the context file. For example, `--platform`, `--artifact`, `--app-id`, `--output-dir`, `--pr-number`, or `--task-id` override the JSON values. For local mobile runs, `--app-id` is optional when Cali can infer it from the artifact.
 
+For safety, Cali sanitizes credential-bearing repository URLs when loading context and publishes a reduced safe context in `report.json` by default.
+
 ## Examples
 
 ### Local QA
@@ -105,6 +108,7 @@ Local mobile behavior:
 
 ```bash
 cali qa --env mobile-pr --context ./cali-context.json
+cali qa --env eas-mobile-pr --context ./cali-context.json
 cali review --env mobile-pr --context ./cali-context.json
 ```
 
@@ -199,21 +203,51 @@ If you want Android app id inference from an `.apk` without passing `--app-id`, 
 
 If one of these is missing, Cali stops with an actionable error instead of trying to install it automatically.
 
+## Required Skills
+
+Cali discovers local skills from:
+
+- `./.agents/skills`
+- `~/.agents/skills`
+
+Required role skills:
+
+- `qa`: `agent-device`
+- `perf-review`: `agent-device`, `react-devtools`
+
+Install examples:
+
+```bash
+npx skills add callstackincubator/agent-device --agent codex --skill agent-device -y
+npx skills add callstackincubator/agent-skills --agent codex --skill react-devtools -y
+```
+
 ## CI Providers
 
 The current ship-ready CI story for Cali is:
 
 - generate one `cali-context.json`
 - run `cali qa --env mobile-pr --context ./cali-context.json`
-- collect `artifacts/qa/report.json`, `section.md`, `status.txt`, and optional blob screenshot URLs
+- collect the compact CI outputs from the file publisher
+
+## CI Helpers
+
+Use the built-in helper command instead of hand-writing `cali-context.json` in shell:
+
+```bash
+cali write-mobile-pr-context --from github-actions --output ./cali-context.json
+cali write-mobile-pr-context --from eas --output ./cali-context.json
+```
+
+Render a compact GitHub-ready comment from a generated report:
+
+```bash
+cali render-comment --report ./artifacts/qa/report.json --format github
+```
 
 ### GitHub Actions
 
-Use the example context writer:
-
-- [`examples/github-actions/write-mobile-pr-context.sh`](./examples/github-actions/write-mobile-pr-context.sh)
-
-Required envs for that script:
+Required envs for the built-in context writer:
 
 - `CALI_PLATFORM`
 - `CALI_ARTIFACT_PATH`
@@ -231,19 +265,18 @@ Copy-paste example:
     CALI_PLATFORM: android
     CALI_ARTIFACT_PATH: ${{ steps.download_build.outputs.artifact_path }}
     CALI_APP_ID: com.example.myapp
-  run: bash ./packages/cali/examples/github-actions/write-mobile-pr-context.sh ./cali-context.json
+  run: node ./packages/cali/dist/index.js write-mobile-pr-context --from github-actions --output ./cali-context.json
 
 - name: Run Cali QA
   env:
     AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
   run: node ./packages/cali/dist/index.js qa --env mobile-pr --context ./cali-context.json
+
+- name: Render PR comment body
+  run: node ./packages/cali/dist/index.js render-comment --report ./artifacts/qa/report.json --format github --output ./artifacts/qa/comment-github.md
 ```
 
 ### EAS Workflows
-
-Use the example context writer:
-
-- [`examples/eas-workflows/write-mobile-pr-context.sh`](./examples/eas-workflows/write-mobile-pr-context.sh)
 
 This matches the environment shape from the earlier `eas-agent-device` workflow pattern:
 
@@ -268,15 +301,15 @@ Copy-paste example:
     BUILD_ID: ${{ env.BUILD_ID }}
     WORKFLOW_URL: ${{ workflow.url }}
     PR_JSON: ${{ toJSON(github.event.pull_request) }}
-  run: bash ./packages/cali/examples/eas-workflows/write-mobile-pr-context.sh ./cali-context.json
+  run: node ./packages/cali/dist/index.js write-mobile-pr-context --from eas --output ./cali-context.json
 
 - id: run_cali_qa
   env:
     AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
-  run: node ./packages/cali/dist/index.js qa --env mobile-pr --context ./cali-context.json
+  run: node ./packages/cali/dist/index.js qa --env eas-mobile-pr --context ./cali-context.json
 ```
 
-If you want a combined PR comment like the original Expo blog post flow, aggregate `section.md`, `status.txt`, and `report.json` from each platform job in a final workflow step. Cali intentionally leaves that aggregation to the workflow layer.
+If you want a combined PR comment like the original Expo blog post flow, aggregate `comment-github.md`, `status-label.txt`, and `screenshots.json` from each platform job in a final workflow step. Cali still leaves the final multi-job aggregation to the workflow layer.
 
 ## Config
 
@@ -305,11 +338,6 @@ export default {
 
 If `defaultCommand` is set, running plain `cali` with no command will execute that default command instead of showing help.
 
-By default, Cali discovers skills from:
-
-- `./.agents/skills`
-- `~/.agents/skills`
-
 ## Tool Packs
 
 Built-in tool pack ids:
@@ -336,9 +364,13 @@ Built bundle:
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
 - `bun run qa:env:mobile-pr -- --context ./cali-context.json`
+- `bun run qa:env:eas-mobile-pr -- --context ./cali-context.json`
 - `bun run review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run perf-review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
+- `bun run write-context:gha -- --output ./cali-context.json`
+- `bun run write-context:eas -- --output ./cali-context.json`
+- `bun run render-comment -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
 
@@ -347,17 +379,6 @@ Source/dev loop:
 - `bun run dev:perf-review -- --help`
 - `bun run dev:dev-command -- --help`
 
-## Installing Skills
-
-For starter skills, use `npx skills` with the repos we trust:
-
-```bash
-npx skills add callstackincubator/agent-device --agent codex --skill '*' -y
-npx skills add callstackincubator/agent-skills --agent codex --skill '*' -y
-```
-
-If you want to use performance review flows, make sure the relevant skills are installed too, such as `react-devtools`.
-
 ## Outputs
 
 The file publisher writes:
@@ -365,6 +386,12 @@ The file publisher writes:
 - `report.json`
 - `section.md`
 - `status.txt`
+- `status-label.txt`
+- `summary.txt`
+- `top-issue.txt`
+- `screenshots.md`
+- `screenshots.json`
+- `comment-github.md`
 - `publisher-manifest.json`
 
 The default output directory is `artifacts/<command>`.

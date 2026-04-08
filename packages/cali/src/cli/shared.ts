@@ -83,7 +83,7 @@ export function normalizeBaseCommandCliOptions(options: BaseCommandOptions): Com
 
 export function registerCommonCommandOptions(command: any) {
   return command
-    .option('--env <name>', 'Built-in env: mobile-pr, local-android, local-ios')
+    .option('--env <name>', 'Built-in env: mobile-pr, eas-mobile-pr, local-android, local-ios')
     .option('--config <path>', 'Path to cali.config.ts')
     .option('--prompt <text>', 'Add task-specific intent')
     .option('--context <path>', 'Load shared Cali runtime context from JSON')

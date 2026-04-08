@@ -5,10 +5,18 @@ import { printRetroBanner } from './banner.js'
 import { devCommandDefinition } from './dev.js'
 import { perfReviewCommandDefinition } from './perf-review.js'
 import { qaCommandDefinition } from './qa.js'
+import { renderCommentCommandDefinition } from './render-comment.js'
 import { reviewCommandDefinition } from './review.js'
+import { writeMobilePrContextCommandDefinition } from './write-mobile-pr-context.js'
 
 function shouldPrintBanner(args: string[]) {
-  if (args.includes('--quiet') || process.env.CI === 'true' || process.env.CI === '1') {
+  if (
+    args.includes('--quiet') ||
+    args.includes('--help') ||
+    args.includes('-h') ||
+    process.env.CI === 'true' ||
+    process.env.CI === '1'
+  ) {
     return false
   }
 
@@ -25,6 +33,8 @@ function createCli() {
     reviewCommandDefinition,
     perfReviewCommandDefinition,
     devCommandDefinition,
+    writeMobilePrContextCommandDefinition,
+    renderCommentCommandDefinition,
   ]) {
     commandDefinition.register(cli)
   }

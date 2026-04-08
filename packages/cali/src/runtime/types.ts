@@ -8,7 +8,7 @@ export type RepositoryContext = {
   provider?: string
   owner?: string
   name?: string
-  cloneUrl?: string
+  webUrl?: string
   defaultBranch?: string
   currentBranch?: string
   commitSha?: string

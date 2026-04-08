@@ -76,6 +76,7 @@ Current maturity:
 Built-in envs:
 
 - `mobile-pr`
+- `eas-mobile-pr`
 - `local-android`
 - `local-ios`
 
@@ -176,6 +177,9 @@ Built bundle:
 - `bun run review -- --help`
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
+- `bun run write-context:gha -- --output ./cali-context.json`
+- `bun run write-context:eas -- --output ./cali-context.json`
+- `bun run render-comment -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
 

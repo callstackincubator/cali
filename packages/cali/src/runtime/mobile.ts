@@ -444,12 +444,7 @@ async function openAppSession(
   context: MobileCommandRuntimeContext,
   options: Parameters<typeof runAgentDeviceSessionCommand>[3] = {}
 ) {
-  return runAgentDeviceSessionCommand(
-    sessionName,
-    'open',
-    buildSessionOpenArgs(context),
-    options
-  )
+  return runAgentDeviceSessionCommand(sessionName, 'open', buildSessionOpenArgs(context), options)
 }
 
 async function installFreshArtifact(
