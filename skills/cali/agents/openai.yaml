@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cali CLI"
+  short_description: "Use and extend the Cali mobile QA and agent CLI"
+  default_prompt: "Use $cali to work with the Cali CLI, its runtime contracts, and its mobile QA workflows."

@@ -30,6 +30,11 @@ function buildDeviceSelectorArgs(context: { platform: CaliPlatform; deviceName?:
   return args
 }
 
+function buildSessionOpenArgs(context: { platform: CaliPlatform; appId: string }) {
+  // Session-bound open must not re-specify the device selector once bootstrap chose the target.
+  return ['--platform', context.platform, context.appId, '--relaunch']
+}
+
 function summarizeCommandFailure(result: { stdout: string; stderr: string; exitCode: number }) {
   return result.stderr || result.stdout || `Command failed with exit code ${result.exitCode}.`
 }
@@ -442,7 +447,7 @@ async function openAppSession(
   return runAgentDeviceSessionCommand(
     sessionName,
     'open',
-    [...buildDeviceSelectorArgs(context), context.appId, '--relaunch'],
+    buildSessionOpenArgs(context),
     options
   )
 }
