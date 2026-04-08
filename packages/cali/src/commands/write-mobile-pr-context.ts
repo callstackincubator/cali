@@ -41,30 +41,11 @@ async function loadJsonFile(filePath: string) {
   return JSON.parse(content)
 }
 
-function normalizeGithubPullRequest(event: any): CaliContext['pullRequest'] {
-  const pullRequest = event?.pull_request
+function normalizePullRequest(pullRequest: any): CaliContext['pullRequest'] {
   if (!pullRequest) {
     return undefined
   }
 
-  return {
-    number: pullRequest.number,
-    title: pullRequest.title,
-    body: pullRequest.body,
-    url: sanitizeUrl(pullRequest.html_url, { stripQuery: true }),
-    labels: (pullRequest.labels ?? []).map((label: any) => label.name).filter(Boolean),
-    isDraft: pullRequest.draft ?? false,
-    baseBranch: pullRequest.base?.ref,
-    headBranch: pullRequest.head?.ref,
-  }
-}
-
-function normalizeEasPullRequest(rawPrJson: string | undefined): CaliContext['pullRequest'] {
-  if (!rawPrJson) {
-    return undefined
-  }
-
-  const pullRequest = JSON.parse(rawPrJson)
   return {
     number: pullRequest.number,
     title: pullRequest.title,
@@ -98,6 +79,53 @@ function resolveGithubRepositoryContext(): CaliContext['repository'] {
         : undefined,
     currentBranch,
     commitSha,
+  }
+}
+
+function readPullRequestJson(rawPrJson: string | undefined) {
+  if (!rawPrJson) {
+    return undefined
+  }
+
+  try {
+    return JSON.parse(rawPrJson)
+  } catch {
+    throw createContextWriterError('Failed to parse PR_JSON as JSON.')
+  }
+}
+
+function createCommonContext(options: {
+  workspaceRoot: string
+  repository?: CaliContext['repository']
+  pullRequest?: CaliContext['pullRequest']
+  platform: MobilePlatform
+  artifactPath: string
+  appId?: string
+  deviceName?: string
+  outputDir: string
+  buildId?: string
+  workflowUrl?: string
+  logsUrl?: string
+}): CaliContext {
+  return {
+    workspaceRoot: options.workspaceRoot,
+    repository: options.repository,
+    task: undefined,
+    pullRequest: options.pullRequest,
+    mobile: {
+      platform: options.platform,
+      artifactPath: options.artifactPath,
+      appId: options.appId,
+      deviceName: options.deviceName,
+    },
+    build: {
+      id: options.buildId,
+      workflowUrl: sanitizeUrl(options.workflowUrl, { stripQuery: true }),
+      logsUrl: sanitizeUrl(options.logsUrl, { stripQuery: true }),
+    },
+    output: {
+      outputDir: options.outputDir,
+    },
   }
 }
 
@@ -137,7 +165,7 @@ async function buildGithubActionsContext(
     )
   }
 
-  return {
+  return createCommonContext({
     workspaceRoot: resolveFromCwd(
       cwd,
       options.workspaceRoot ?? readOptionalEnv('GITHUB_WORKSPACE') ?? cwd
@@ -146,27 +174,16 @@ async function buildGithubActionsContext(
       ...detectedRepository.repository,
       ...githubRepository,
     },
-    task: undefined,
-    pullRequest: normalizeGithubPullRequest(event),
-    mobile: {
-      platform,
-      artifactPath: resolveFromCwd(cwd, artifactPath),
-      appId: options.appId ?? readOptionalEnv('CALI_APP_ID'),
-      deviceName: options.deviceName ?? readOptionalEnv('CALI_DEVICE_NAME'),
-    },
-    build: {
-      id: buildId,
-      workflowUrl: sanitizeUrl(workflowUrl, { stripQuery: true }),
-      logsUrl: sanitizeUrl(options.logsUrl, { stripQuery: true }),
-    },
-    output: {
-      outputDir: resolveFromCwd(cwd, outputDir),
-    },
-    qa: undefined,
-    review: undefined,
-    perfReview: undefined,
-    dev: undefined,
-  }
+    pullRequest: normalizePullRequest(event?.pull_request),
+    platform,
+    artifactPath: resolveFromCwd(cwd, artifactPath),
+    appId: options.appId ?? readOptionalEnv('CALI_APP_ID'),
+    deviceName: options.deviceName ?? readOptionalEnv('CALI_DEVICE_NAME'),
+    outputDir: resolveFromCwd(cwd, outputDir),
+    buildId,
+    workflowUrl,
+    logsUrl: options.logsUrl,
+  })
 }
 
 async function buildEasContext(
@@ -174,6 +191,7 @@ async function buildEasContext(
   options: WriteMobilePrContextOptions
 ): Promise<CaliContext> {
   const detectedRepository = await detectRepositoryContext(cwd)
+  const githubRepository = resolveGithubRepositoryContext()
   const outputDir = options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? './artifacts/qa'
   const artifactPath = options.artifactPath ?? readOptionalEnv('APP_PATH')
   const platform = options.platform ?? normalizePlatform(readOptionalEnv('QA_PLATFORM'))
@@ -186,32 +204,22 @@ async function buildEasContext(
     throw createContextWriterError('EAS context generation requires QA_PLATFORM or --platform.')
   }
 
-  return {
+  return createCommonContext({
     workspaceRoot: resolveFromCwd(cwd, options.workspaceRoot ?? cwd),
-    repository: detectedRepository.repository,
-    task: undefined,
-    pullRequest: normalizeEasPullRequest(readOptionalEnv('PR_JSON')),
-    mobile: {
-      platform,
-      artifactPath: resolveFromCwd(cwd, artifactPath),
-      appId: options.appId ?? readOptionalEnv('APPLICATION_ID'),
-      deviceName: options.deviceName ?? readOptionalEnv('CALI_DEVICE_NAME'),
+    repository: {
+      ...detectedRepository.repository,
+      ...githubRepository,
     },
-    build: {
-      id: options.buildId ?? readOptionalEnv('BUILD_ID'),
-      workflowUrl: sanitizeUrl(options.workflowUrl ?? readOptionalEnv('WORKFLOW_URL'), {
-        stripQuery: true,
-      }),
-      logsUrl: sanitizeUrl(options.logsUrl ?? readOptionalEnv('LOGS_URL'), { stripQuery: true }),
-    },
-    output: {
-      outputDir: resolveFromCwd(cwd, outputDir),
-    },
-    qa: undefined,
-    review: undefined,
-    perfReview: undefined,
-    dev: undefined,
-  }
+    pullRequest: normalizePullRequest(readPullRequestJson(readOptionalEnv('PR_JSON'))),
+    platform,
+    artifactPath: resolveFromCwd(cwd, artifactPath),
+    appId: options.appId ?? readOptionalEnv('APPLICATION_ID'),
+    deviceName: options.deviceName ?? readOptionalEnv('CALI_DEVICE_NAME'),
+    outputDir: resolveFromCwd(cwd, outputDir),
+    buildId: options.buildId ?? readOptionalEnv('BUILD_ID'),
+    workflowUrl: options.workflowUrl ?? readOptionalEnv('WORKFLOW_URL'),
+    logsUrl: options.logsUrl ?? readOptionalEnv('LOGS_URL'),
+  })
 }
 
 function removeUndefinedValues(value: unknown): unknown {

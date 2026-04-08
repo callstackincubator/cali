@@ -6,7 +6,15 @@ function hasScreenshots(report: CommandReport): report is QaReport | PerfReviewR
 
 function getTitle(report: CommandReport) {
   if (report.command === 'qa') {
-    return `${report.context.mobile?.platform === 'ios' ? 'iOS' : 'Android'} QA`
+    if (report.context.mobile?.platform === 'ios') {
+      return 'iOS QA'
+    }
+
+    if (report.context.mobile?.platform === 'android') {
+      return 'Android QA'
+    }
+
+    return 'Mobile QA'
   }
 
   if (report.command === 'perf-review') {
