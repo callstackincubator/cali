@@ -50,10 +50,11 @@ const TOOL_PACK_DEFINITIONS: Record<ToolPackName, ToolPackDefinition> = {
         preloadPaths: ['SKILL.md', 'references/bootstrap-install.md', 'references/exploration.md'],
       },
     ],
-    createTools: ({ state, sessionName }) =>
+    createTools: ({ context, state, sessionName }) =>
       createAgentDeviceToolPack({
         trace: state.agentDeviceTrace,
         sessionName: sessionName!,
+        screenshotsDir: context.output.screenshotsDir ?? 'screenshots',
       }),
   },
   'repo-read': {
