@@ -16,7 +16,13 @@ export function sanitizeUrl(rawUrl: string | undefined, options: { stripQuery?: 
     }
     return parsed.toString()
   } catch {
-    return rawUrl
+    const strippedCredentials = rawUrl
+      .replace(/^(https?:\/\/)[^@]+@/, '$1')
+      .replace(/^(ssh:\/\/)[^@]+@/, '$1')
+    if (options.stripQuery) {
+      return strippedCredentials.replace(/[?#].*$/, '')
+    }
+    return strippedCredentials
   }
 }
 

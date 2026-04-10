@@ -21,38 +21,44 @@ const MobileDefaultsSchema = z
     deviceName: z.string().optional(),
     appId: z.string().optional(),
   })
+  .strict()
   .optional()
 
-const CommandConfigSchema = z.object({
-  contextPath: z.string().optional(),
-  enabledToolPacks: z.array(ToolPackNameSchema).optional(),
-  outputPublishers: z.array(PublisherNameSchema).optional(),
-  extraInstructions: StringArraySchema,
-  model: z.string().optional(),
-  mobileDefaults: MobileDefaultsSchema,
-})
+const CommandConfigSchema = z
+  .object({
+    contextPath: z.string().optional(),
+    enabledToolPacks: z.array(ToolPackNameSchema).optional(),
+    outputPublishers: z.array(PublisherNameSchema).optional(),
+    extraInstructions: StringArraySchema,
+    model: z.string().optional(),
+    mobileDefaults: MobileDefaultsSchema,
+  })
+  .strict()
 
 export function normalizeCaliEnvName(value?: string): CaliEnvName | undefined {
   const result = CaliEnvNameSchema.safeParse(value)
   return result.success ? result.data : undefined
 }
 
-export const CaliConfigSchema = z.object({
-  defaultCommand: CommandIdSchema.optional(),
-  env: CaliEnvNameSchema.optional(),
-  workspaceRoot: z.string().optional(),
-  skillPaths: z.array(z.string()).optional(),
-  outputPublishers: z.array(PublisherNameSchema).optional(),
-  model: z.string().optional(),
-  commands: z
-    .object({
-      qa: CommandConfigSchema.optional(),
-      review: CommandConfigSchema.optional(),
-      perfReview: CommandConfigSchema.optional(),
-      dev: CommandConfigSchema.optional(),
-    })
-    .optional(),
-})
+export const CaliConfigSchema = z
+  .object({
+    defaultCommand: CommandIdSchema.optional(),
+    env: CaliEnvNameSchema.optional(),
+    workspaceRoot: z.string().optional(),
+    skillPaths: z.array(z.string()).optional(),
+    outputPublishers: z.array(PublisherNameSchema).optional(),
+    model: z.string().optional(),
+    commands: z
+      .object({
+        qa: CommandConfigSchema.optional(),
+        review: CommandConfigSchema.optional(),
+        perfReview: CommandConfigSchema.optional(),
+        dev: CommandConfigSchema.optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
 
 export type CaliEnvName = z.infer<typeof CaliEnvNameSchema>
 export type ToolPackName = z.infer<typeof ToolPackNameSchema>

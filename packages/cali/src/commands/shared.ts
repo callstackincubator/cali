@@ -3,7 +3,7 @@ import path from 'node:path'
 import { tool } from 'ai'
 import { z } from 'zod'
 
-import { loadCommandConfig } from '../config/load.js'
+import { loadCommandConfig, resolveDefaultEnvName } from '../config/load.js'
 import type { ToolPackName } from '../config/schema.js'
 import type { CommandReport } from '../report/types.js'
 import { buildCiContext } from '../runtime/ci-context.js'
@@ -138,29 +138,13 @@ export async function loadRunContext(commandId: CommandId, cli: CommandCliOption
   }
 }
 
-function getDefaultEnvName(commandId: CommandId, cli: CommandCliOptions) {
-  if (cli.envName) {
-    return cli.envName
-  }
-
-  if (cli.ciProvider === 'eas') {
-    return 'eas-mobile-pr'
-  }
-
-  if (cli.ciProvider === 'github-actions') {
-    return 'mobile-pr'
-  }
-
-  return commandId === 'qa' || commandId === 'perf-review' ? 'local-android' : 'mobile-pr'
-}
-
 function createFallbackConfig(
   commandId: CommandId,
   cwd: string,
   cli: CommandCliOptions
 ): CommandResolvedConfig {
   return {
-    envName: getDefaultEnvName(commandId, cli),
+    envName: cli.envName ?? resolveDefaultEnvName(commandId, cli.ciProvider),
     workspaceRoot: cli.workspaceRoot ? resolveFromCwd(cwd, cli.workspaceRoot) : cwd,
     contextPath: undefined,
     skillPaths: [],

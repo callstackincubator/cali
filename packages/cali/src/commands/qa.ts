@@ -5,8 +5,6 @@ import type { CommandCliOptions } from '../runtime/types.js'
 import { humanizeScreenshotLabel } from '../utils.js'
 import { runMobileStructuredCommand } from './shared.js'
 
-const MAX_QA_TRACE_ENTRIES = 20
-
 function resolveAcceptanceCriteria(
   context: Parameters<typeof runQaMobileRole>[0]['context'],
   prompt?: string
@@ -82,6 +80,8 @@ export async function runQaCommand(cli: CommandCliOptions) {
     cli.envName = cli.ciProvider === 'eas' ? 'eas-mobile-pr' : 'mobile-pr'
   }
 
+  let acceptanceCriteriaUsed: string[] | undefined
+
   return runMobileStructuredCommand({
     commandId: 'qa',
     cli,
@@ -89,7 +89,6 @@ export async function runQaCommand(cli: CommandCliOptions) {
     reportLabel: 'QA report',
     createBlockedReport,
     composeReport: async ({ model, context, reportInput, mobileContext, traces }) => {
-      const acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
       const screenshots = mobileContext ? await listScreenshots(mobileContext.screenshotsDir) : []
 
       return composeQaReport(
@@ -97,8 +96,8 @@ export async function runQaCommand(cli: CommandCliOptions) {
         context,
         reportInput,
         screenshots,
-        traces.agentDeviceTrace.slice(-MAX_QA_TRACE_ENTRIES),
-        acceptanceCriteriaUsed
+        traces.agentDeviceTrace,
+        acceptanceCriteriaUsed ?? resolveAcceptanceCriteria(context, cli.prompt)
       )
     },
     runRole: async ({
@@ -112,7 +111,7 @@ export async function runQaCommand(cli: CommandCliOptions) {
       onAgentStep,
       onAgentFinish,
     }) => {
-      const acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
+      acceptanceCriteriaUsed = resolveAcceptanceCriteria(context, cli.prompt)
 
       return runQaMobileRole({
         context,

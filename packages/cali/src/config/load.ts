@@ -24,6 +24,29 @@ type LoadCommandConfigOptions = {
   model?: string
 }
 
+export function resolveDefaultEnvName(
+  commandId: CommandId,
+  ciProvider?: 'github-actions' | 'eas'
+): CaliEnvName {
+  if (ciProvider === 'eas') {
+    return 'eas-mobile-pr'
+  }
+
+  if (ciProvider === 'github-actions') {
+    return 'mobile-pr'
+  }
+
+  switch (commandId) {
+    case 'review':
+    case 'dev':
+      return 'mobile-pr'
+    case 'qa':
+    case 'perf-review':
+    default:
+      return 'local-android'
+  }
+}
+
 function getBuiltInSkillPaths(cwd: string) {
   return [path.join(cwd, '.agents', 'skills'), path.join(homedir(), '.agents', 'skills')]
 }
@@ -68,18 +91,6 @@ const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
       'This is a local Android QA run. Keep the flow lightweight and focus on the highest-signal UI paths.',
     ],
   },
-}
-
-function getDefaultEnvName(commandId: CommandId): CaliEnvName {
-  switch (commandId) {
-    case 'review':
-    case 'dev':
-      return 'mobile-pr'
-    case 'qa':
-    case 'perf-review':
-    default:
-      return 'local-android'
-  }
 }
 
 function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): CaliCommandConfig {
@@ -191,7 +202,8 @@ export async function loadCommandConfig(
 ): Promise<CommandResolvedConfig> {
   const { commandId, cwd, configPath, envName: cliEnvName, model } = options
   const fileConfig = await loadCaliConfigFile(cwd, configPath)
-  const envName = cliEnvName ?? normalizeCaliEnvName(fileConfig.env) ?? getDefaultEnvName(commandId)
+  const envName =
+    cliEnvName ?? normalizeCaliEnvName(fileConfig.env) ?? resolveDefaultEnvName(commandId)
   const envDefaults = getEnvCommandDefaults(commandId, envName)
   const commandConfig = getCommandConfig(fileConfig, COMMAND_CONFIG_KEYS[commandId])
   const merged = mergeCommandConfig(envDefaults, commandConfig)

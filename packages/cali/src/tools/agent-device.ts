@@ -47,23 +47,17 @@ function normalizeScreenshotArgs(args: string[], screenshotsDir: string) {
 
 function normalizeCommandInvocation(command: string, args: string[], screenshotsDir: string) {
   const trimmedCommand = command.trim()
-
-  if (args.length > 0 || !trimmedCommand.includes(' ')) {
-    const normalizedArgs =
-      trimmedCommand === 'screenshot' ? normalizeScreenshotArgs(args, screenshotsDir) : args
-    return {
-      command: trimmedCommand,
-      args: normalizedArgs,
-    }
+  if (args.length === 0 && /\s/.test(trimmedCommand)) {
+    throw new Error(
+      'agent_device expects the subcommand in `command` and each argument in `args`. Do not pass a shell-style command string.'
+    )
   }
 
-  const [normalizedCommand, ...normalizedArgs] = trimmedCommand.split(/\s+/g)
+  const normalizedArgs =
+    trimmedCommand === 'screenshot' ? normalizeScreenshotArgs(args, screenshotsDir) : args
   return {
-    command: normalizedCommand,
-    args:
-      normalizedCommand === 'screenshot'
-        ? normalizeScreenshotArgs(normalizedArgs, screenshotsDir)
-        : normalizedArgs,
+    command: trimmedCommand,
+    args: normalizedArgs,
   }
 }
 

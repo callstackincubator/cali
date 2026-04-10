@@ -15,6 +15,26 @@ type RepoWriteToolPackOptions = {
   allowedCommands?: string[]
 }
 
+const SHELL_METACHARACTERS = [';', '&&', '||', '|', '&', '`', '$(', '>', '<', '\n', '\r']
+
+function resolveWorkspacePath(workspaceRoot: string, relativePath: string) {
+  const normalizedWorkspaceRoot = path.resolve(workspaceRoot)
+  const absolutePath = resolveFromCwd(normalizedWorkspaceRoot, relativePath)
+
+  if (
+    absolutePath !== normalizedWorkspaceRoot &&
+    !absolutePath.startsWith(`${normalizedWorkspaceRoot}${path.sep}`)
+  ) {
+    throw new Error(`Path must stay within the repository workspace: ${relativePath}`)
+  }
+
+  return absolutePath
+}
+
+function hasShellMetacharacters(command: string) {
+  return SHELL_METACHARACTERS.some((token) => command.includes(token))
+}
+
 export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
   const { workspaceRoot } = options
 
@@ -84,7 +104,7 @@ export function createRepoReadToolPack(options: RepoReadToolPackOptions) {
         maxLines: z.number().int().min(1).max(400).optional(),
       }),
       execute: async ({ path: relativePath, startLine = 1, maxLines = 200 }) => {
-        const absolutePath = resolveFromCwd(workspaceRoot, relativePath)
+        const absolutePath = resolveWorkspacePath(workspaceRoot, relativePath)
         const content = await readFile(absolutePath, 'utf8')
         const lines = content.split('\n')
         const slice = lines.slice(startLine - 1, startLine - 1 + maxLines)
@@ -155,7 +175,7 @@ export function createRepoWriteToolPack(options: RepoWriteToolPackOptions) {
         content: z.string(),
       }),
       execute: async ({ path: relativePath, content }) => {
-        const absolutePath = resolveFromCwd(workspaceRoot, relativePath)
+        const absolutePath = resolveWorkspacePath(workspaceRoot, relativePath)
         await ensureDirectory(path.dirname(absolutePath))
         await writeFile(absolutePath, content, 'utf8')
 
@@ -171,7 +191,7 @@ export function createRepoWriteToolPack(options: RepoWriteToolPackOptions) {
         path: z.string(),
       }),
       execute: async ({ path: relativePath }) => {
-        const absolutePath = resolveFromCwd(workspaceRoot, relativePath)
+        const absolutePath = resolveWorkspacePath(workspaceRoot, relativePath)
         await rm(absolutePath, { force: true })
 
         return {
@@ -187,7 +207,25 @@ export function createRepoWriteToolPack(options: RepoWriteToolPackOptions) {
         command: z.string(),
       }),
       execute: async ({ command }) => {
-        if (allowedCommands.length > 0 && !allowedCommands.includes(command)) {
+        if (allowedCommands.length === 0) {
+          return {
+            ok: false,
+            exitCode: 1,
+            stdout: '',
+            stderr: 'No repository commands are allowed by the current write policy.',
+          }
+        }
+
+        if (hasShellMetacharacters(command)) {
+          return {
+            ok: false,
+            exitCode: 1,
+            stdout: '',
+            stderr: 'Shell metacharacters are not allowed in repository commands.',
+          }
+        }
+
+        if (!allowedCommands.includes(command)) {
           return {
             ok: false,
             exitCode: 1,

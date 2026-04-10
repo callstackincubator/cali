@@ -46,16 +46,17 @@ export type QaReportInput = {
   environmentNotes?: string[]
 }
 
-export type QaReport = BaseCommandReport &
-  QaReportInput & {
-    command: 'qa'
-    checked: string[]
-    issues: string[]
-    screenshotLabels: ScreenshotLabel[]
-    screenshots: ScreenshotInfo[]
-    acceptanceCriteriaUsed: string[]
-    agentDeviceTrace: ToolTraceEntry[]
-  }
+export type QaReport = BaseCommandReport & {
+  command: 'qa'
+  checked: string[]
+  issues: string[]
+  nextSteps?: string[]
+  screenshotLabels: ScreenshotLabel[]
+  screenshots: ScreenshotInfo[]
+  acceptanceCriteriaUsed: string[]
+  environmentNotes?: string[]
+  agentDeviceTrace: ToolTraceEntry[]
+}
 
 export type ReviewFinding = {
   severity: 'low' | 'medium' | 'high' | 'critical'
@@ -76,13 +77,14 @@ export type ReviewReportInput = {
   environmentNotes?: string[]
 }
 
-export type ReviewReport = BaseCommandReport &
-  ReviewReportInput & {
-    command: 'review'
-    findings: ReviewFinding[]
-    strengths: string[]
-    validationGaps: string[]
-  }
+export type ReviewReport = BaseCommandReport & {
+  command: 'review'
+  findings: ReviewFinding[]
+  strengths: string[]
+  validationGaps: string[]
+  nextSteps?: string[]
+  environmentNotes?: string[]
+}
 
 export type PerfEvidence = {
   kind: 'component' | 'profile' | 'screenshot' | 'note'
@@ -109,19 +111,20 @@ export type PerfReviewReportInput = {
   environmentNotes?: string[]
 }
 
-export type PerfReviewReport = BaseCommandReport &
-  PerfReviewReportInput & {
-    command: 'perf-review'
-    scenario: string
-    slowComponents: PerfComponentFinding[]
-    rerenderHotspots: PerfComponentFinding[]
-    suspectedCauses: string[]
-    evidence: PerfEvidence[]
-    recommendedFixes: string[]
-    screenshots: ScreenshotInfo[]
-    agentDeviceTrace: ToolTraceEntry[]
-    reactDevtoolsTrace: ToolTraceEntry[]
-  }
+export type PerfReviewReport = BaseCommandReport & {
+  command: 'perf-review'
+  scenario: string
+  slowComponents: PerfComponentFinding[]
+  rerenderHotspots: PerfComponentFinding[]
+  suspectedCauses: string[]
+  evidence: PerfEvidence[]
+  recommendedFixes: string[]
+  nextSteps?: string[]
+  environmentNotes?: string[]
+  screenshots: ScreenshotInfo[]
+  agentDeviceTrace: ToolTraceEntry[]
+  reactDevtoolsTrace: ToolTraceEntry[]
+}
 
 export type DevReportInput = {
   overallStatus: ResultStatus
@@ -134,13 +137,14 @@ export type DevReportInput = {
   environmentNotes?: string[]
 }
 
-export type DevReport = BaseCommandReport &
-  DevReportInput & {
-    command: 'dev'
-    filesChanged: string[]
-    validationsRun: string[]
-    followUps: string[]
-    patchStatus: 'applied' | 'planned' | 'blocked' | 'partial'
-  }
+export type DevReport = BaseCommandReport & {
+  command: 'dev'
+  filesChanged: string[]
+  validationsRun: string[]
+  followUps: string[]
+  patchStatus: 'applied' | 'planned' | 'blocked' | 'partial'
+  nextSteps?: string[]
+  environmentNotes?: string[]
+}
 
 export type CommandReport = QaReport | ReviewReport | PerfReviewReport | DevReport

@@ -1,3 +1,4 @@
+import { sanitizeUrl } from '../runtime/context-repo.js'
 import { renderCommandSection } from './render.js'
 import type { CommandReport, PerfReviewReport, QaReport, ScreenshotInfo } from './types.js'
 
@@ -55,8 +56,8 @@ export function renderScreenshotsMarkdown(report: CommandReport) {
 
   return `${report.screenshots
     .map((screenshot) =>
-      screenshot.blobUrl
-        ? `- [${screenshot.label}](${screenshot.blobUrl})`
+      sanitizeUrl(screenshot.blobUrl)
+        ? `- [${screenshot.label}](${sanitizeUrl(screenshot.blobUrl)})`
         : `- ${screenshot.label}: ${screenshot.fileName}`
     )
     .join('\n')}\n`
@@ -68,11 +69,7 @@ export function renderScreenshotsCell(report?: CommandReport) {
   }
 
   return report.screenshots
-    .map((screenshot) =>
-      screenshot.blobUrl
-        ? `**${screenshot.label}**<br><a href="${screenshot.blobUrl}"><img src="${screenshot.blobUrl}" alt="${screenshot.label}" height="320" /></a>`
-        : `**${screenshot.label}**<br>${screenshot.fileName}`
-    )
+    .map((screenshot) => renderScreenshotCellItem(screenshot))
     .join('<br><br>')
 }
 
@@ -113,6 +110,25 @@ function createScreenshotMetadata(screenshot: ScreenshotInfo, index: number) {
     blobPathname: screenshot.blobPathname,
     uploadError: screenshot.uploadError,
   }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+function renderScreenshotCellItem(screenshot: ScreenshotInfo) {
+  const safeLabel = escapeHtml(screenshot.label)
+  const safeUrl = sanitizeUrl(screenshot.blobUrl)
+
+  if (!safeUrl) {
+    return `**${safeLabel}**<br>${escapeHtml(screenshot.fileName)}`
+  }
+
+  return `**${safeLabel}**<br><a href="${safeUrl}"><img src="${safeUrl}" alt="${safeLabel}" height="320" /></a>`
 }
 
 export function renderGithubComment(report: CommandReport) {

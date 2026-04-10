@@ -406,6 +406,18 @@ async function inferIosAppId(artifactPath: string) {
 }
 
 async function findAppBundle(directory: string): Promise<string | undefined> {
+  return findAppBundleAtDepth(directory, 0)
+}
+
+async function findAppBundleAtDepth(
+  directory: string,
+  depth: number,
+  maxDepth = 3
+): Promise<string | undefined> {
+  if (depth > maxDepth) {
+    return undefined
+  }
+
   const entries = await readdir(directory, { withFileTypes: true })
 
   for (const entry of entries) {
@@ -420,7 +432,7 @@ async function findAppBundle(directory: string): Promise<string | undefined> {
       continue
     }
 
-    const nestedPath = await findAppBundle(path.join(directory, entry.name))
+    const nestedPath = await findAppBundleAtDepth(path.join(directory, entry.name), depth + 1)
     if (nestedPath) {
       return nestedPath
     }

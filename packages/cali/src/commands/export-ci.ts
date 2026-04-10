@@ -1,6 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
+import { z } from 'zod'
+
 import {
   buildScreenshotsMetadata,
   getTopIssue,
@@ -9,6 +11,116 @@ import {
 } from '../report/ci.js'
 import type { CommandReport } from '../report/types.js'
 import { ensureDirectory, resolveFromCwd } from '../utils.js'
+
+const ResultStatusSchema = z.enum(['passed', 'failed', 'blocked', 'not_tested', 'unsure'])
+
+const BaseReportSchema = z
+  .object({
+    command: z.enum(['qa', 'review', 'perf-review', 'dev']),
+    overallStatus: ResultStatusSchema,
+    summary: z.string(),
+    nextSteps: z.array(z.string()).optional(),
+    environmentNotes: z.array(z.string()).optional(),
+    publisherResults: z
+      .array(
+        z.object({
+          publisher: z.string(),
+          status: z.enum(['ok', 'skipped', 'failed']),
+          detail: z.string().optional(),
+        })
+      )
+      .optional(),
+    context: z.object({
+      workspaceRoot: z.string(),
+      repository: z
+        .object({
+          owner: z.string().optional(),
+          name: z.string().optional(),
+        })
+        .passthrough()
+        .optional(),
+      pullRequest: z
+        .object({
+          number: z.number().optional(),
+        })
+        .passthrough()
+        .optional(),
+      build: z
+        .object({
+          id: z.string().optional(),
+          workflowUrl: z.string().optional(),
+        })
+        .passthrough()
+        .optional(),
+      mobile: z
+        .object({
+          platform: z.enum(['android', 'ios']).optional(),
+        })
+        .passthrough()
+        .optional(),
+    }),
+  })
+  .passthrough()
+
+const ScreenshotInfoSchema = z
+  .object({
+    fileName: z.string(),
+    label: z.string(),
+    blobUrl: z.string().optional(),
+    blobDownloadUrl: z.string().optional(),
+    blobPathname: z.string().optional(),
+    uploadError: z.string().optional(),
+  })
+  .passthrough()
+
+const ExportableReportSchema = z.discriminatedUnion('command', [
+  BaseReportSchema.extend({
+    command: z.literal('qa'),
+    checked: z.array(z.string()),
+    issues: z.array(z.string()),
+    acceptanceCriteriaUsed: z.array(z.string()),
+    screenshots: z.array(ScreenshotInfoSchema),
+  }),
+  BaseReportSchema.extend({
+    command: z.literal('review'),
+    findings: z.array(
+      z.object({
+        severity: z.enum(['low', 'medium', 'high', 'critical']),
+        title: z.string(),
+        body: z.string(),
+        file: z.string().optional(),
+        lineStart: z.number().optional(),
+        lineEnd: z.number().optional(),
+      })
+    ),
+    strengths: z.array(z.string()),
+    validationGaps: z.array(z.string()),
+  }),
+  BaseReportSchema.extend({
+    command: z.literal('perf-review'),
+    scenario: z.string(),
+    slowComponents: z.array(z.object({ label: z.string(), detail: z.string() })),
+    rerenderHotspots: z.array(z.object({ label: z.string(), detail: z.string() })),
+    suspectedCauses: z.array(z.string()),
+    evidence: z.array(
+      z.object({
+        kind: z.enum(['component', 'profile', 'screenshot', 'note']),
+        label: z.string(),
+        detail: z.string(),
+        reference: z.string().optional(),
+      })
+    ),
+    recommendedFixes: z.array(z.string()),
+    screenshots: z.array(ScreenshotInfoSchema),
+  }),
+  BaseReportSchema.extend({
+    command: z.literal('dev'),
+    filesChanged: z.array(z.string()),
+    validationsRun: z.array(z.string()),
+    followUps: z.array(z.string()),
+    patchStatus: z.enum(['applied', 'planned', 'blocked', 'partial']),
+  }),
+])
 
 export type ExportCiOptions = {
   reportPath?: string
@@ -193,5 +305,5 @@ function getDefaultTopIssue(report: CommandReport) {
 
 async function readReport(reportPath: string) {
   const content = await readFile(reportPath, 'utf8')
-  return JSON.parse(content) as CommandReport
+  return ExportableReportSchema.parse(JSON.parse(content)) as CommandReport
 }
