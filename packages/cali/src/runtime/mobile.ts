@@ -20,6 +20,8 @@ const utf16Decoder = new TextDecoder('utf-16le')
 
 let aaptPathCache: string | null | undefined
 
+const AGENT_DEVICE_STATE_FILES = ['daemon.json', 'daemon.lock', 'daemon.sock', 'daemon.sock.lock']
+
 function buildDeviceSelectorArgs(context: { platform: CaliPlatform; deviceName?: string }) {
   const args = ['--platform', context.platform]
 
@@ -81,6 +83,58 @@ async function readCommandStdout(file: string, args: string[]) {
   return value.length > 0 ? value : undefined
 }
 
+function looksLikeStaleAgentDeviceState(output: string) {
+  const normalized = output.toLowerCase()
+  return (
+    normalized.includes('stale metadata') ||
+    normalized.includes('daemon.json') ||
+    normalized.includes('daemon.lock') ||
+    normalized.includes('stale daemon') ||
+    normalized.includes('socket') ||
+    normalized.includes('econnrefused')
+  )
+}
+
+async function resetAgentDeviceState() {
+  const stateDir = path.join(homedir(), '.agent-device')
+  await Promise.all(
+    AGENT_DEVICE_STATE_FILES.map((fileName) =>
+      rm(path.join(stateDir, fileName), { force: true, recursive: true })
+    )
+  )
+}
+
+async function ensureAgentDeviceHealthy(platform: CaliPlatform) {
+  const firstAttempt = await runAgentDeviceCommand('devices', ['--platform', platform], {
+    allowFailure: true,
+  })
+
+  if (firstAttempt.ok) {
+    return
+  }
+
+  const firstFailureOutput = [firstAttempt.stderr, firstAttempt.stdout].filter(Boolean).join('\n')
+  if (!looksLikeStaleAgentDeviceState(firstFailureOutput)) {
+    return
+  }
+
+  await resetAgentDeviceState()
+
+  const retryAttempt = await runAgentDeviceCommand('devices', ['--platform', platform], {
+    allowFailure: true,
+  })
+  if (retryAttempt.ok) {
+    return
+  }
+
+  throw new Error(
+    [
+      'agent-device preflight failed after resetting stale daemon state.',
+      summarizeCommandFailure(retryAttempt),
+    ].join('\n\n')
+  )
+}
+
 async function readZipEntry(archivePath: string, entry: string) {
   const result = await runCommand('unzip', ['-p', archivePath, entry], {
     allowFailure: true,
@@ -91,6 +145,14 @@ async function readZipEntry(archivePath: string, entry: string) {
   }
 
   return result.stdoutBuffer
+}
+
+async function ensureArtifactExists(artifactPath: string) {
+  try {
+    await access(artifactPath)
+  } catch {
+    throw new Error(`Mobile artifact does not exist: ${artifactPath}`)
+  }
 }
 
 function parseTextManifestPackageName(text: string) {
@@ -343,6 +405,57 @@ async function inferIosAppId(artifactPath: string) {
   ])
 }
 
+async function findAppBundle(directory: string): Promise<string | undefined> {
+  const entries = await readdir(directory, { withFileTypes: true })
+
+  for (const entry of entries) {
+    const absolutePath = path.join(directory, entry.name)
+    if (entry.isDirectory() && entry.name.endsWith('.app')) {
+      return absolutePath
+    }
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue
+    }
+
+    const nestedPath = await findAppBundle(path.join(directory, entry.name))
+    if (nestedPath) {
+      return nestedPath
+    }
+  }
+
+  return undefined
+}
+
+async function normalizeIosArtifact(artifactPath: string, outputDir: string): Promise<string> {
+  if (!artifactPath.endsWith('.app.tar.gz')) {
+    return artifactPath
+  }
+
+  const extractionDir = path.join(outputDir, '_extracted_app')
+  await rm(extractionDir, { recursive: true, force: true })
+  await ensureDirectory(extractionDir)
+
+  const extractResult = await runCommand('tar', ['-xzf', artifactPath, '-C', extractionDir], {
+    allowFailure: true,
+  })
+  assertCommandSuccess(
+    extractResult,
+    `Failed to extract iOS artifact ${path.basename(artifactPath)}.`
+  )
+
+  const appBundlePath = await findAppBundle(extractionDir)
+  if (!appBundlePath) {
+    throw new Error(
+      `Failed to locate a .app bundle after extracting ${path.basename(artifactPath)}.`
+    )
+  }
+
+  return appBundlePath
+}
+
 async function inferMobileAppId(platform: CaliPlatform, artifactPath: string) {
   if (platform === 'android') {
     return inferAndroidAppId(artifactPath)
@@ -519,11 +632,17 @@ export async function resolveMobileRuntimeContext(
     throw new Error(`${commandId} requires an output directory.`)
   }
 
-  const inferredAppId = await inferMobileAppId(platform, artifactPath)
+  await ensureAgentDeviceHealthy(platform)
+  await ensureArtifactExists(artifactPath)
+
+  const normalizedArtifactPath =
+    platform === 'ios' ? await normalizeIosArtifact(artifactPath, outputDir) : artifactPath
+
+  const inferredAppId = await inferMobileAppId(platform, normalizedArtifactPath)
   const appId = context.mobile?.appId ?? inferredAppId
   if (!appId) {
     throw new Error(
-      `${commandId} requires an app id in context.mobile.appId or --app-id. Cali could not infer it from ${path.basename(artifactPath)}.`
+      `${commandId} requires an app id in context.mobile.appId or --app-id. Cali could not infer it from ${path.basename(normalizedArtifactPath)}.`
     )
   }
 
@@ -536,7 +655,7 @@ export async function resolveMobileRuntimeContext(
 
   return {
     platform,
-    artifactPath,
+    artifactPath: normalizedArtifactPath,
     appId,
     deviceName,
     outputDir,

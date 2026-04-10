@@ -177,9 +177,11 @@ Built bundle:
 - `bun run review -- --help`
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
-- `bun run write-context:gha -- --output ./cali-context.json`
-- `bun run write-context:eas -- --output ./cali-context.json`
+- `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
+- `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
 - `bun run render-comment -- --report ./artifacts/qa/report.json`
+- `bun run export-ci:eas -- --report ./artifacts/qa/report.json`
+- `bun run publish-comment -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
 

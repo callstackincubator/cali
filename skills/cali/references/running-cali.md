@@ -56,18 +56,25 @@ node packages/cali/dist/index.js qa \
 
 # CI-style QA
 node packages/cali/dist/index.js qa \
-  --env mobile-pr \
-  --context ./cali-context.json
+  --ci github-actions \
+  --platform ios \
+  --artifact ./artifacts/MyApp.app
 
-# Generate CI context
-node packages/cali/dist/index.js write-mobile-pr-context \
-  --from eas \
-  --output ./cali-context.json
+# EAS-style QA
+node packages/cali/dist/index.js qa \
+  --ci eas \
+  --platform android \
+  --artifact ./artifacts/app.apk
 
 # Render a compact GitHub comment
 node packages/cali/dist/index.js render-comment \
   --report ./artifacts/qa/report.json \
   --format github
+
+# Export EAS helper files
+node packages/cali/dist/index.js export-ci \
+  --target eas \
+  --report ./artifacts/qa/report.json
 ```
 
 ## Provider setup
@@ -90,9 +97,12 @@ QA_MODEL=anthropic/claude-sonnet-4.6
 
 ## CI notes
 
-- Generate `cali-context.json` before invoking Cali.
-- Do not assume Cali will scrape PR/build metadata from the environment at runtime.
-- Prefer the built-in `write-mobile-pr-context` command over custom `jq` wrappers.
+- For CI, prefer `cali qa --ci github-actions` or `cali qa --ci eas`.
+- Cali derives runtime context from provider env plus CLI overrides before the agent starts.
+- Use the explicit helper commands for integration glue:
+  - `render-comment`
+  - `export-ci`
+  - `publish-comment`
 - For copy-pasteable CI examples, use:
-  - [`packages/cali/examples/github-actions/write-mobile-pr-context.sh`](../../../packages/cali/examples/github-actions/write-mobile-pr-context.sh)
-  - [`packages/cali/examples/eas-workflows/write-mobile-pr-context.sh`](../../../packages/cali/examples/eas-workflows/write-mobile-pr-context.sh)
+  - [`packages/cali/examples/github-actions/run-qa.sh`](../../../packages/cali/examples/github-actions/run-qa.sh)
+  - [`packages/cali/examples/eas-workflows/run-qa.sh`](../../../packages/cali/examples/eas-workflows/run-qa.sh)

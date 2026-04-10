@@ -78,6 +78,10 @@ function createBlockedReport(summary: string): QaReportInput {
 }
 
 export async function runQaCommand(cli: CommandCliOptions) {
+  if (cli.ciProvider && !cli.envName) {
+    cli.envName = cli.ciProvider === 'eas' ? 'eas-mobile-pr' : 'mobile-pr'
+  }
+
   return runMobileStructuredCommand({
     commandId: 'qa',
     cli,

@@ -204,12 +204,14 @@ export async function resolveCommandContext(
   commandId: CommandId,
   cwd: string,
   config: CommandResolvedConfig,
-  cli: CommandCliOptions
+  cli: CommandCliOptions,
+  injectedContext: Partial<CaliContext> = {}
 ): Promise<CaliContext> {
   const fileContext = await loadContextFile(cwd, cli.contextPath ?? config.contextPath)
   const repositoryInfo = await detectRepositoryContext(cwd)
   const workspaceRoot =
     cli.workspaceRoot ??
+    injectedContext.workspaceRoot ??
     fileContext.workspaceRoot ??
     config.workspaceRoot ??
     repositoryInfo.workspaceRoot
@@ -220,7 +222,7 @@ export async function resolveCommandContext(
       repository: repositoryInfo.repository,
       output: {},
     },
-    mergeContext(fileContext, buildCliContext(cli))
+    mergeContext(mergeContext(fileContext, injectedContext), buildCliContext(cli))
   )
 
   return applyDefaults(commandId, merged, workspaceRoot, config, cli)

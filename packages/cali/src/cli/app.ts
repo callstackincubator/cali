@@ -3,11 +3,12 @@ import { cac } from 'cac'
 import { loadCaliConfigFile } from '../config/load.js'
 import { printRetroBanner } from './banner.js'
 import { devCommandDefinition } from './dev.js'
+import { exportCiCommandDefinition } from './export-ci.js'
 import { perfReviewCommandDefinition } from './perf-review.js'
+import { publishCommentCommandDefinition } from './publish-comment.js'
 import { qaCommandDefinition } from './qa.js'
 import { renderCommentCommandDefinition } from './render-comment.js'
 import { reviewCommandDefinition } from './review.js'
-import { writeMobilePrContextCommandDefinition } from './write-mobile-pr-context.js'
 
 function shouldPrintBanner(args: string[]) {
   if (
@@ -33,8 +34,9 @@ function createCli() {
     reviewCommandDefinition,
     perfReviewCommandDefinition,
     devCommandDefinition,
-    writeMobilePrContextCommandDefinition,
     renderCommentCommandDefinition,
+    exportCiCommandDefinition,
+    publishCommentCommandDefinition,
   ]) {
     commandDefinition.register(cli)
   }

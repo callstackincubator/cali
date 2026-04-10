@@ -13,7 +13,7 @@ Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It ru
 
 - command: the user-facing role entrypoint such as `cali qa` or `cali review`
 - env: default runtime shape for a command, such as CI-style `mobile-pr` or local mobile envs
-- context file: the explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
+- context file: the optional explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
 - tool pack: a bounded capability surface such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
 - publisher: how reports are exposed after a run, such as `file` or `blob`
 
@@ -104,11 +104,12 @@ Local mobile behavior:
 - local envs try `open --relaunch` before reinstalling
 - `local-ios` reuses the single booted simulator when exactly one is available, otherwise pass `--device`
 
-### CI-style QA or review
+### CI-native QA or review
 
 ```bash
+cali qa --ci github-actions --platform ios --artifact ./artifacts/MyApp.app
+cali qa --ci eas --platform android --artifact ./artifacts/app.apk
 cali qa --env mobile-pr --context ./cali-context.json
-cali qa --env eas-mobile-pr --context ./cali-context.json
 cali review --env mobile-pr --context ./cali-context.json
 ```
 
@@ -224,92 +225,112 @@ npx skills add callstackincubator/agent-skills --agent codex --skill react-devto
 
 ## CI Providers
 
-The current ship-ready CI story for Cali is:
+The CI-native entrypoint is `cali qa --ci <provider>`.
 
-- generate one `cali-context.json`
-- run `cali qa --env mobile-pr --context ./cali-context.json`
-- collect the compact CI outputs from the file publisher
+Supported providers:
+
+- `github-actions`
+- `eas`
+
+For CI runs, Cali derives runtime context from provider env plus CLI overrides. You no longer need a separate `write-mobile-pr-context` step.
+
+Required provider inputs:
+
+- GitHub Actions:
+  - `GITHUB_EVENT_PATH`
+  - `CALI_PLATFORM` or `--platform`
+  - `CALI_ARTIFACT_PATH` or `--artifact`
+  - optional `CALI_APP_ID`
+  - optional `CALI_DEVICE_NAME`
+  - optional `CALI_OUTPUT_DIR`
+- EAS:
+  - `QA_PLATFORM` or `--platform`
+  - `APP_PATH` or `--artifact`
+  - optional `APPLICATION_ID`
+  - optional `CALI_DEVICE_NAME`
+  - optional `BUILD_ID`
+  - optional `WORKFLOW_URL`
+  - optional `LOGS_URL`
+  - optional `PR_JSON`
 
 ## CI Helpers
 
-Use the built-in helper command instead of hand-writing `cali-context.json` in shell:
+Core CI command:
 
 ```bash
-cali write-mobile-pr-context --from github-actions --output ./cali-context.json
-cali write-mobile-pr-context --from eas --output ./cali-context.json
+cali qa --ci github-actions --quiet --platform ios --artifact ./artifacts/MyApp.app
+cali qa --ci eas --quiet --platform android --artifact ./artifacts/app.apk
 ```
 
-Render a compact GitHub-ready comment from a generated report:
+Optional helpers:
 
 ```bash
+cali export-ci --target eas --report ./artifacts/qa/report.json
 cali render-comment --report ./artifacts/qa/report.json --format github
+cali render-comment --format github-multi-platform --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json
+cali publish-comment --report ./artifacts/qa/report.json
 ```
 
 ### GitHub Actions
 
-Required envs for the built-in context writer:
-
-- `CALI_PLATFORM`
-- `CALI_ARTIFACT_PATH`
-- optional `CALI_APP_ID`
-- optional `CALI_DEVICE_NAME`
-
-Copy-paste example:
+Minimal GitHub Actions example:
 
 ```yaml
-- name: Install Cali CLIs
+- name: Install required CLIs
   run: npm i -g agent-device
-
-- name: Write Cali context
-  env:
-    CALI_PLATFORM: android
-    CALI_ARTIFACT_PATH: ${{ steps.download_build.outputs.artifact_path }}
-    CALI_APP_ID: com.example.myapp
-  run: node ./packages/cali/dist/index.js write-mobile-pr-context --from github-actions --output ./cali-context.json
 
 - name: Run Cali QA
   env:
     AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
-  run: node ./packages/cali/dist/index.js qa --env mobile-pr --context ./cali-context.json
+    CALI_PLATFORM: android
+    CALI_ARTIFACT_PATH: ${{ steps.download_build.outputs.artifact_path }}
+    CALI_APP_ID: com.example.myapp
+  run: node ./packages/cali/dist/index.js qa --ci github-actions --quiet
 
-- name: Render PR comment body
-  run: node ./packages/cali/dist/index.js render-comment --report ./artifacts/qa/report.json --format github --output ./artifacts/qa/comment-github.md
+- name: Publish PR comment
+  run: node ./packages/cali/dist/index.js publish-comment --report ./artifacts/qa/report.json
 ```
+
+Reference wrapper:
+- [`packages/cali/examples/github-actions/run-qa.sh`](./examples/github-actions/run-qa.sh)
 
 ### EAS Workflows
 
-This matches the environment shape from the earlier `eas-agent-device` workflow pattern:
-
-- `QA_PLATFORM`
-- `APP_PATH`
-- `APPLICATION_ID`
-- optional `BUILD_ID`
-- optional `WORKFLOW_URL`
-- optional `PR_JSON`
-
-Copy-paste example:
+Minimal EAS example:
 
 ```yaml
 - id: install_agent_device
   run: npm i -g agent-device
 
-- id: write_cali_context
+- id: run_cali_qa
   env:
+    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
     QA_PLATFORM: android
     APP_PATH: ${{ steps.download_build.outputs.artifact_path }}
     APPLICATION_ID: dev.expo.myapp
     BUILD_ID: ${{ env.BUILD_ID }}
     WORKFLOW_URL: ${{ workflow.url }}
     PR_JSON: ${{ toJSON(github.event.pull_request) }}
-  run: node ./packages/cali/dist/index.js write-mobile-pr-context --from eas --output ./cali-context.json
+  run: node ./packages/cali/dist/index.js qa --ci eas --quiet
 
-- id: run_cali_qa
-  env:
-    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
-  run: node ./packages/cali/dist/index.js qa --env eas-mobile-pr --context ./cali-context.json
+- id: export_cali_ci
+  run: node ./packages/cali/dist/index.js export-ci --target eas --report ./artifacts/qa/report.json
 ```
 
-If you want a combined PR comment like the original Expo blog post flow, aggregate `comment-github.md`, `status-label.txt`, and `screenshots.json` from each platform job in a final workflow step. Cali still leaves the final multi-job aggregation to the workflow layer.
+Reference wrapper:
+- [`packages/cali/examples/eas-workflows/run-qa.sh`](./examples/eas-workflows/run-qa.sh)
+
+For multi-platform PR comments, render once from both platform reports:
+
+```bash
+cali render-comment \
+  --format github-multi-platform \
+  --android ./artifacts/android/report.json \
+  --ios ./artifacts/ios/report.json \
+  --output ./artifacts/comment.md
+```
+
+`publish-comment` uses the GitHub CLI, so make sure `gh` is available and authenticated in the job where you call it.
 
 ## Config
 
@@ -364,13 +385,14 @@ Built bundle:
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
 - `bun run qa:env:mobile-pr -- --context ./cali-context.json`
-- `bun run qa:env:eas-mobile-pr -- --context ./cali-context.json`
+- `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
+- `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
 - `bun run review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run perf-review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
-- `bun run write-context:gha -- --output ./cali-context.json`
-- `bun run write-context:eas -- --output ./cali-context.json`
 - `bun run render-comment -- --report ./artifacts/qa/report.json`
+- `bun run export-ci:eas -- --report ./artifacts/qa/report.json`
+- `bun run publish-comment -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
 
@@ -395,6 +417,8 @@ The file publisher writes:
 - `publisher-manifest.json`
 
 The default output directory is `artifacts/<command>`.
+
+For `qa`, Cali writes this output contract even for blocked runs during CI/bootstrap startup, as long as the output directory itself is writable.
 
 For `qa` and `perf-review`, screenshots are saved under `artifacts/<command>/screenshots`.
 

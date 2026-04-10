@@ -2,6 +2,7 @@ import type { CommandCliOptions } from '../runtime/types.js'
 import { normalizePlatform } from '../utils.js'
 
 export type BaseCommandOptions = {
+  ci?: string
   env?: string
   config?: string
   prompt?: string
@@ -54,6 +55,7 @@ export function normalizeBaseCommandCliOptions(options: BaseCommandOptions): Com
   }
 
   return {
+    ciProvider: readOptionalString(options.ci) as CommandCliOptions['ciProvider'],
     envName: readOptionalString(options.env) as CommandCliOptions['envName'],
     configPath: readOptionalString(options.config),
     prompt: readOptionalString(options.prompt),

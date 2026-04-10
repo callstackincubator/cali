@@ -45,7 +45,7 @@ const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
     ...MOBILE_PR_QA_DEFAULTS,
     extraInstructions: [
       ...asArray(MOBILE_PR_QA_DEFAULTS.extraInstructions),
-      'This run is expected to execute in EAS-style CI with explicit context generated before Cali starts.',
+      'This run is expected to execute in EAS-style CI with runtime context derived before the agent starts.',
     ],
   },
   'local-ios': {

@@ -111,7 +111,8 @@ export async function publishFileReport({
   }
 
   const finalReport = createSafePublishedReport(report, publisherResults)
-  const topIssue = getTopIssue(finalReport) ?? ''
+  const topIssue =
+    getTopIssue(finalReport) ?? (finalReport.overallStatus === 'passed' ? '' : finalReport.summary)
 
   await ensureDirectory(outputDir)
   await writeFile(

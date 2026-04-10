@@ -1,4 +1,5 @@
 import type { CaliEnvName, PublisherName, ToolPackName } from '../config/schema.js'
+import type { CiProvider } from './ci-context.js'
 export type { CommandId } from '../config/schema.js'
 export type CommandConfigKey = 'qa' | 'review' | 'perfReview' | 'dev'
 
@@ -98,6 +99,7 @@ export type MobileCommandRuntimeContext = {
 }
 
 export type CommandCliOptions = {
+  ciProvider?: CiProvider
   envName?: CaliEnvName
   configPath?: string
   prompt?: string

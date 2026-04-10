@@ -1,18 +1,13 @@
-import { readFile, writeFile } from 'node:fs/promises'
-import path from 'node:path'
+import { readFile } from 'node:fs/promises'
 
 import { DOCS_URLS } from '../docs.js'
-import { detectRepositoryContext, sanitizeUrl } from '../runtime/context-repo.js'
-import type { CaliContext } from '../runtime/types.js'
-import { ensureDirectory, resolveFromCwd } from '../utils.js'
+import { detectRepositoryContext, sanitizeUrl } from './context-repo.js'
+import type { CaliContext, CaliPlatform } from './types.js'
 
-type WriteMobilePrContextProvider = 'github-actions' | 'eas'
-type MobilePlatform = 'android' | 'ios'
+export type CiProvider = 'github-actions' | 'eas'
 
-export type WriteMobilePrContextOptions = {
-  from: WriteMobilePrContextProvider
-  outputPath: string
-  platform?: MobilePlatform
+type BuildCiContextOptions = {
+  platform?: CaliPlatform
   artifactPath?: string
   appId?: string
   deviceName?: string
@@ -28,12 +23,12 @@ function readOptionalEnv(name: string) {
   return value && value.length > 0 ? value : undefined
 }
 
-function normalizePlatform(value: string | undefined): MobilePlatform | undefined {
+function normalizePlatform(value: string | undefined): CaliPlatform | undefined {
   return value === 'android' || value === 'ios' ? value : undefined
 }
 
-function createContextWriterError(message: string) {
-  return new Error([message, `Docs: ${DOCS_URLS.ciHelpers}`].join('\n\n'))
+function createCiContextError(message: string) {
+  return new Error([message, `Docs: ${DOCS_URLS.ciProviders}`].join('\n\n'))
 }
 
 async function loadJsonFile(filePath: string) {
@@ -90,7 +85,7 @@ function readPullRequestJson(rawPrJson: string | undefined) {
   try {
     return JSON.parse(rawPrJson)
   } catch {
-    throw createContextWriterError('Failed to parse PR_JSON as JSON.')
+    throw createCiContextError('Failed to parse PR_JSON as JSON.')
   }
 }
 
@@ -98,7 +93,7 @@ function createCommonContext(options: {
   workspaceRoot: string
   repository?: CaliContext['repository']
   pullRequest?: CaliContext['pullRequest']
-  platform: MobilePlatform
+  platform: CaliPlatform
   artifactPath: string
   appId?: string
   deviceName?: string
@@ -106,11 +101,10 @@ function createCommonContext(options: {
   buildId?: string
   workflowUrl?: string
   logsUrl?: string
-}): CaliContext {
+}): Partial<CaliContext> {
   return {
     workspaceRoot: options.workspaceRoot,
     repository: options.repository,
-    task: undefined,
     pullRequest: options.pullRequest,
     mobile: {
       platform: options.platform,
@@ -118,11 +112,14 @@ function createCommonContext(options: {
       appId: options.appId,
       deviceName: options.deviceName,
     },
-    build: {
-      id: options.buildId,
-      workflowUrl: sanitizeUrl(options.workflowUrl, { stripQuery: true }),
-      logsUrl: sanitizeUrl(options.logsUrl, { stripQuery: true }),
-    },
+    build:
+      options.buildId || options.workflowUrl || options.logsUrl
+        ? {
+            id: options.buildId,
+            workflowUrl: sanitizeUrl(options.workflowUrl, { stripQuery: true }),
+            logsUrl: sanitizeUrl(options.logsUrl, { stripQuery: true }),
+          }
+        : undefined,
     output: {
       outputDir: options.outputDir,
     },
@@ -131,11 +128,11 @@ function createCommonContext(options: {
 
 async function buildGithubActionsContext(
   cwd: string,
-  options: WriteMobilePrContextOptions
-): Promise<CaliContext> {
+  options: BuildCiContextOptions
+): Promise<Partial<CaliContext>> {
   const eventPath = readOptionalEnv('GITHUB_EVENT_PATH')
   if (!eventPath) {
-    throw createContextWriterError('GitHub Actions context generation requires GITHUB_EVENT_PATH.')
+    throw createCiContextError('GitHub Actions CI mode requires GITHUB_EVENT_PATH.')
   }
 
   const event = await loadJsonFile(eventPath)
@@ -154,32 +151,25 @@ async function buildGithubActionsContext(
       : undefined)
 
   if (!platform) {
-    throw createContextWriterError(
-      'GitHub Actions context generation requires CALI_PLATFORM or --platform.'
-    )
+    throw createCiContextError('GitHub Actions CI mode requires CALI_PLATFORM or --platform.')
   }
 
   if (!artifactPath) {
-    throw createContextWriterError(
-      'GitHub Actions context generation requires CALI_ARTIFACT_PATH or --artifact.'
-    )
+    throw createCiContextError('GitHub Actions CI mode requires CALI_ARTIFACT_PATH or --artifact.')
   }
 
   return createCommonContext({
-    workspaceRoot: resolveFromCwd(
-      cwd,
-      options.workspaceRoot ?? readOptionalEnv('GITHUB_WORKSPACE') ?? cwd
-    ),
+    workspaceRoot: options.workspaceRoot ?? readOptionalEnv('GITHUB_WORKSPACE') ?? cwd,
     repository: {
       ...detectedRepository.repository,
       ...githubRepository,
     },
     pullRequest: normalizePullRequest(event?.pull_request),
     platform,
-    artifactPath: resolveFromCwd(cwd, artifactPath),
+    artifactPath,
     appId: options.appId ?? readOptionalEnv('CALI_APP_ID'),
     deviceName: options.deviceName ?? readOptionalEnv('CALI_DEVICE_NAME'),
-    outputDir: resolveFromCwd(cwd, outputDir),
+    outputDir,
     buildId,
     workflowUrl,
     logsUrl: options.logsUrl,
@@ -188,8 +178,8 @@ async function buildGithubActionsContext(
 
 async function buildEasContext(
   cwd: string,
-  options: WriteMobilePrContextOptions
-): Promise<CaliContext> {
+  options: BuildCiContextOptions
+): Promise<Partial<CaliContext>> {
   const detectedRepository = await detectRepositoryContext(cwd)
   const githubRepository = resolveGithubRepositoryContext()
   const outputDir = options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? './artifacts/qa'
@@ -197,64 +187,39 @@ async function buildEasContext(
   const platform = options.platform ?? normalizePlatform(readOptionalEnv('QA_PLATFORM'))
 
   if (!artifactPath) {
-    throw createContextWriterError('EAS context generation requires APP_PATH or --artifact.')
+    throw createCiContextError('EAS CI mode requires APP_PATH or --artifact.')
   }
 
   if (!platform) {
-    throw createContextWriterError('EAS context generation requires QA_PLATFORM or --platform.')
+    throw createCiContextError('EAS CI mode requires QA_PLATFORM or --platform.')
   }
 
   return createCommonContext({
-    workspaceRoot: resolveFromCwd(cwd, options.workspaceRoot ?? cwd),
+    workspaceRoot: options.workspaceRoot ?? cwd,
     repository: {
       ...detectedRepository.repository,
       ...githubRepository,
     },
     pullRequest: normalizePullRequest(readPullRequestJson(readOptionalEnv('PR_JSON'))),
     platform,
-    artifactPath: resolveFromCwd(cwd, artifactPath),
+    artifactPath,
     appId: options.appId ?? readOptionalEnv('APPLICATION_ID'),
     deviceName: options.deviceName ?? readOptionalEnv('CALI_DEVICE_NAME'),
-    outputDir: resolveFromCwd(cwd, outputDir),
+    outputDir,
     buildId: options.buildId ?? readOptionalEnv('BUILD_ID'),
     workflowUrl: options.workflowUrl ?? readOptionalEnv('WORKFLOW_URL'),
     logsUrl: options.logsUrl ?? readOptionalEnv('LOGS_URL'),
   })
 }
 
-function removeUndefinedValues(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(removeUndefinedValues).filter((entry) => entry !== undefined)
+export async function buildCiContext(
+  cwd: string,
+  provider: CiProvider,
+  options: BuildCiContextOptions
+): Promise<Partial<CaliContext>> {
+  if (provider === 'github-actions') {
+    return buildGithubActionsContext(cwd, options)
   }
 
-  if (value && typeof value === 'object') {
-    const entries = Object.entries(value)
-      .map(([entryKey, entryValue]) => [entryKey, removeUndefinedValues(entryValue)] as const)
-      .filter(([, entryValue]) => entryValue !== undefined)
-    if (entries.length === 0) {
-      return undefined
-    }
-
-    return Object.fromEntries(entries)
-  }
-
-  return value
-}
-
-export async function writeMobilePrContext(options: WriteMobilePrContextOptions) {
-  const cwd = process.cwd()
-  const context =
-    options.from === 'github-actions'
-      ? await buildGithubActionsContext(cwd, options)
-      : await buildEasContext(cwd, options)
-  const outputPath = resolveFromCwd(cwd, options.outputPath)
-
-  await ensureDirectory(path.dirname(outputPath))
-  await writeFile(
-    outputPath,
-    `${JSON.stringify(removeUndefinedValues(context) ?? {}, null, 2)}\n`,
-    'utf8'
-  )
-
-  console.log(`Wrote ${outputPath}`)
+  return buildEasContext(cwd, options)
 }
