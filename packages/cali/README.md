@@ -287,8 +287,12 @@ Minimal GitHub Actions example:
   run: node ./packages/cali/dist/index.js qa --ci github-actions --quiet
 
 - name: Publish PR comment
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ./artifacts/qa/comment-github.md
 ```
+
+`gh` is preinstalled on GitHub-hosted runners. For self-hosted runners or container jobs, install it explicitly and provide `GH_TOKEN`.
 
 Reference wrapper:
 - [`packages/cali/examples/github-actions/run-qa.sh`](./examples/github-actions/run-qa.sh)
@@ -332,6 +336,7 @@ cali render-comment \
 If you want Cali to stay GitHub-agnostic, keep posting outside Cali and use the rendered output directly:
 
 ```bash
+export GH_TOKEN="${GITHUB_TOKEN}"
 gh pr comment "$PR_NUMBER" --body-file ./artifacts/qa/comment-github.md
 ```
 
