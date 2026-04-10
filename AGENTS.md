@@ -121,6 +121,8 @@ Required skill guidance should be preloaded through the tool-pack registry when 
 
 - Bootstrap stays outside the role in the command module.
 - The role inspects the app and writes a structured QA report.
+- Use `--ci github-actions|eas` for CI runs.
+- Use `--env local-android|local-ios` for local runs.
 - Requires `agent-device` on `PATH`.
 - Mobile runs use a unique per-run `agent-device` session. Do not reuse ambient sessions.
 - Local envs are convenience-first: try `open --relaunch` before reinstalling.

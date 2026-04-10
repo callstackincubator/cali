@@ -114,6 +114,7 @@ export async function loadRunContext(commandId: CommandId, cli: CommandCliOption
     cwd,
     configPath: cli.configPath,
     envName: cli.envName,
+    ciProvider: cli.ciProvider,
     model: cli.model,
   })
   const injectedContext = cli.ciProvider

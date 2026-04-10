@@ -76,8 +76,10 @@ function createBlockedReport(summary: string): QaReportInput {
 }
 
 export async function runQaCommand(cli: CommandCliOptions) {
-  if (cli.ciProvider && !cli.envName) {
-    cli.envName = cli.ciProvider === 'eas' ? 'eas-mobile-pr' : 'mobile-pr'
+  if (cli.envName === 'mobile-pr' || cli.envName === 'eas-mobile-pr') {
+    throw new Error(
+      '`cali qa` no longer supports `--env mobile-pr` or `--env eas-mobile-pr`. Use `--ci github-actions` or `--ci eas` for CI runs, or `--env local-android` / `--env local-ios` for local runs.'
+    )
   }
 
   let acceptanceCriteriaUsed: string[] | undefined

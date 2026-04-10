@@ -83,9 +83,12 @@ export function normalizeBaseCommandCliOptions(options: BaseCommandOptions): Com
   }
 }
 
-export function registerCommonCommandOptions(command: any) {
+export function registerCommonCommandOptions(command: any, envDescription?: string) {
   return command
-    .option('--env <name>', 'Built-in env: mobile-pr, eas-mobile-pr, local-android, local-ios')
+    .option(
+      '--env <name>',
+      envDescription ?? 'Built-in env: mobile-pr, eas-mobile-pr, local-android, local-ios'
+    )
     .option('--config <path>', 'Path to cali.config.ts')
     .option('--prompt <text>', 'Add task-specific intent')
     .option('--context <path>', 'Load shared Cali runtime context from JSON')
@@ -107,8 +110,8 @@ export function registerCommonCommandOptions(command: any) {
     .option('--logs-url <url>', 'Logs URL')
 }
 
-export function registerCommonMobileOptions(command: any) {
-  return registerCommonCommandOptions(command)
+export function registerCommonMobileOptions(command: any, envDescription?: string) {
+  return registerCommonCommandOptions(command, envDescription)
     .option('--platform <name>', 'android or ios')
     .option('--artifact <path>', 'App artifact path (.apk, .aab, .app, .ipa)')
     .option('--app-id <id>', 'Optional application identifier / package name override')

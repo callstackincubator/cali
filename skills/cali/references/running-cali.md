@@ -19,6 +19,10 @@ Use this reference for normal Cali usage, setup, and CI wiring.
 - all commands use one shared `cali-context.json`
 - flags override context values
 
+For `qa`, use:
+- `--env local-android` or `--env local-ios` for local runs
+- `--ci github-actions` or `--ci eas` for CI runs
+
 Built-in envs:
 
 - `mobile-pr`
@@ -97,6 +101,7 @@ QA_MODEL=anthropic/claude-sonnet-4.6
 ## CI notes
 
 - For CI, prefer `cali qa --ci github-actions` or `cali qa --ci eas`.
+- `cali qa --env mobile-pr` and `cali qa --env eas-mobile-pr` are intentionally not supported.
 - Cali derives runtime context from provider env plus CLI overrides before the agent starts.
 - Use the explicit helper commands for integration glue:
   - `export-ci`

@@ -4,6 +4,7 @@ import path from 'node:path'
 
 import { cosmiconfig } from 'cosmiconfig'
 
+import type { CiProvider } from '../runtime/ci-context.js'
 import type { CommandResolvedConfig } from '../runtime/types.js'
 import type { CommandConfigKey } from '../runtime/types.js'
 import { asArray, resolveFromCwd, uniqueStrings } from '../utils.js'
@@ -21,6 +22,7 @@ type LoadCommandConfigOptions = {
   cwd: string
   configPath?: string
   envName?: CaliEnvName
+  ciProvider?: CiProvider
   model?: string
 }
 
@@ -200,10 +202,12 @@ export async function loadCaliConfigFile(cwd: string, explicitPath?: string): Pr
 export async function loadCommandConfig(
   options: LoadCommandConfigOptions
 ): Promise<CommandResolvedConfig> {
-  const { commandId, cwd, configPath, envName: cliEnvName, model } = options
+  const { commandId, cwd, configPath, envName: cliEnvName, ciProvider, model } = options
   const fileConfig = await loadCaliConfigFile(cwd, configPath)
   const envName =
-    cliEnvName ?? normalizeCaliEnvName(fileConfig.env) ?? resolveDefaultEnvName(commandId)
+    cliEnvName ??
+    normalizeCaliEnvName(fileConfig.env) ??
+    resolveDefaultEnvName(commandId, ciProvider)
   const envDefaults = getEnvCommandDefaults(commandId, envName)
   const commandConfig = getCommandConfig(fileConfig, COMMAND_CONFIG_KEYS[commandId])
   const merged = mergeCommandConfig(envDefaults, commandConfig)

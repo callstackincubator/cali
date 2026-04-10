@@ -12,7 +12,7 @@ Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It ru
 ## Core Concepts
 
 - command: the user-facing role entrypoint such as `cali qa` or `cali review`
-- env: default runtime shape for a command, such as CI-style `mobile-pr` or local mobile envs
+- env: default runtime shape for a command; for `qa`, use local envs only and prefer `--ci` in CI
 - context file: the optional explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
 - tool pack: a bounded capability surface such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
 - publisher: how reports are exposed after a run, such as `file` or `blob`
@@ -109,9 +109,10 @@ Local mobile behavior:
 ```bash
 cali qa --ci github-actions --platform ios --artifact ./artifacts/MyApp.app
 cali qa --ci eas --platform android --artifact ./artifacts/app.apk
-cali qa --env mobile-pr --context ./cali-context.json
 cali review --env mobile-pr --context ./cali-context.json
 ```
+
+`cali qa` no longer supports `--env mobile-pr` or `--env eas-mobile-pr`. Use `--ci github-actions|eas` for CI runs.
 
 Use `--quiet` to suppress the retro banner in scripted environments. Cali also suppresses the banner automatically when `CI=true`.
 
@@ -381,7 +382,6 @@ Built bundle:
 - `bun run review -- --help`
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
-- `bun run qa:env:mobile-pr -- --context ./cali-context.json`
 - `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
 - `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
 - `bun run review:env:mobile-pr -- --context ./cali-context.json`
