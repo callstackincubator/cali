@@ -118,7 +118,7 @@ Required skill guidance should be preloaded through the tool-pack registry when 
 - In GitHub Actions and EAS, CI provider detection is automatic; `--ci` is only an override.
 - Requires `agent-device` on `PATH`.
 - Mobile runs use a unique per-run `agent-device` session. Do not reuse ambient sessions.
-- Local envs are convenience-first: try `open --relaunch` before reinstalling.
+- Local runs are convenience-first: try `open --relaunch` before reinstalling.
 - Local mobile runs can infer the app id from the artifact. Do not require `--app-id` unless inference fails.
 - If `--device` is omitted, reuse the single booted local target when exactly one exists; otherwise fail clearly.
 - Acceptance criteria resolve in this order:
@@ -178,8 +178,6 @@ Built bundle:
 - `bun run dev:command -- --help`
 - `bun run qa:local:android -- --artifact ./artifacts/app.apk`
 - `bun run qa:local:ios -- --artifact ./artifacts/MyApp.app`
-- `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
-- `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
 - `bun run export-ci -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:

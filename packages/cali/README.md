@@ -253,7 +253,7 @@ cali qa --quiet --platform ios --artifact ./artifacts/MyApp.app
 cali qa --quiet --platform android --artifact ./artifacts/app.apk
 ```
 
-Optional helpers:
+Optional helper:
 
 ```bash
 cali export-ci --report ./artifacts/qa/report.json
@@ -388,8 +388,6 @@ Built bundle:
 - `bun run dev:command -- --help`
 - `bun run qa:local:android -- --artifact ./artifacts/app.apk`
 - `bun run qa:local:ios -- --artifact ./artifacts/MyApp.app`
-- `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
-- `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
 - `bun run review -- --context ./cali-context.json`
 - `bun run perf-review -- --context ./cali-context.json --platform android --artifact ./artifacts/app.apk`
 - `bun run dev:command -- --context ./cali-context.json`
