@@ -81,7 +81,16 @@ function formatStatusForTable(report?: CommandReport) {
 }
 
 function formatTopIssueForTable(report?: CommandReport) {
-  return report ? (getTopIssue(report) ?? 'N/A') : 'N/A'
+  return report ? toInlineTableCell(getTopIssue(report) ?? 'N/A') : 'N/A'
+}
+
+function toInlineTableCell(value: string) {
+  return value
+    .split('\n')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join('<br>')
+    .replaceAll('|', '\\|')
 }
 
 export function buildScreenshotsMetadata(report: CommandReport) {

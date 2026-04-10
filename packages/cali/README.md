@@ -266,8 +266,7 @@ Optional helpers:
 
 ```bash
 cali export-ci --report ./artifacts/qa/report.json
-cali render-comment --report ./artifacts/qa/report.json --format github
-cali render-comment --format github-multi-platform --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json
+cali export-ci --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json
 ```
 
 ### GitHub Actions
@@ -286,10 +285,13 @@ Minimal GitHub Actions example:
     CALI_APP_ID: com.example.myapp
   run: node ./packages/cali/dist/index.js qa --ci github-actions --quiet
 
+- name: Export CI comment
+  run: node ./packages/cali/dist/index.js export-ci --report ./artifacts/qa/report.json
+
 - name: Publish PR comment
   env:
     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ./artifacts/qa/comment-github.md
+  run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ./artifacts/qa/ci-comment.md
 ```
 
 `gh` is preinstalled on GitHub-hosted runners. For self-hosted runners or container jobs, install it explicitly and provide `GH_TOKEN`.
@@ -323,21 +325,20 @@ Minimal EAS example:
 Reference wrapper:
 - [`packages/cali/examples/eas-workflows/run-qa.sh`](./examples/eas-workflows/run-qa.sh)
 
-For multi-platform PR comments, render once from both platform reports:
+For multi-platform PR comments, export once from both platform reports:
 
 ```bash
-cali render-comment \
-  --format github-multi-platform \
+cali export-ci \
   --android ./artifacts/android/report.json \
   --ios ./artifacts/ios/report.json \
-  --output ./artifacts/comment.md
+  --output-dir ./artifacts/combined-comment
 ```
 
 If you want Cali to stay GitHub-agnostic, keep posting outside Cali and use the rendered output directly:
 
 ```bash
 export GH_TOKEN="${GITHUB_TOKEN}"
-gh pr comment "$PR_NUMBER" --body-file ./artifacts/qa/comment-github.md
+gh pr comment "$PR_NUMBER" --body-file ./artifacts/combined-comment/ci-comment.md
 ```
 
 ## Config
@@ -398,7 +399,6 @@ Built bundle:
 - `bun run review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run perf-review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
-- `bun run render-comment -- --report ./artifacts/qa/report.json`
 - `bun run export-ci -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
@@ -427,20 +427,29 @@ The default output directory is `artifacts/<command>`.
 
 For `qa`, Cali writes this output contract even for blocked runs during CI/bootstrap startup, as long as the output directory itself is writable.
 
-`export-ci` writes a smaller shared CI helper contract:
+`export-ci` writes a smaller shared CI contract:
 
-- `ci-status.txt`
-- `ci-section-body.md`
+- `ci-comment.md`
 - `ci-output.json`
 
-`ci-output.json` combines:
+Single-platform `ci-output.json` combines:
 
+- `kind`
 - `status`
 - `statusLabel`
 - `summary`
 - `topIssue`
-- `screenshotsCell`
 - `screenshots`
+
+Multi-platform `ci-output.json` combines:
+
+- `kind`
+- `status`
+- `statusLabel`
+- `summary`
+- `topIssue`
+- `platforms.android`
+- `platforms.ios`
 
 For `qa` and `perf-review`, screenshots are saved under `artifacts/<command>/screenshots`.
 

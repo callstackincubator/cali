@@ -179,7 +179,6 @@ Built bundle:
 - `bun run dev:command -- --help`
 - `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
 - `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
-- `bun run render-comment -- --report ./artifacts/qa/report.json`
 - `bun run export-ci -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:

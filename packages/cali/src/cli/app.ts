@@ -6,7 +6,6 @@ import { devCommandDefinition } from './dev.js'
 import { exportCiCommandDefinition } from './export-ci.js'
 import { perfReviewCommandDefinition } from './perf-review.js'
 import { qaCommandDefinition } from './qa.js'
-import { renderCommentCommandDefinition } from './render-comment.js'
 import { reviewCommandDefinition } from './review.js'
 
 function shouldPrintBanner(args: string[]) {
@@ -33,7 +32,6 @@ function createCli() {
     reviewCommandDefinition,
     perfReviewCommandDefinition,
     devCommandDefinition,
-    renderCommentCommandDefinition,
     exportCiCommandDefinition,
   ]) {
     commandDefinition.register(cli)

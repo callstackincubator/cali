@@ -29,7 +29,6 @@
     "dev:review": "node --import=tsx ./src/cli.ts review",
     "dev:perf-review": "node --import=tsx ./src/cli.ts perf-review",
     "dev:dev-command": "node --import=tsx ./src/cli.ts dev",
-    "render-comment": "node ./dist/index.js render-comment --format github",
     "export-ci": "node ./dist/index.js export-ci"
   },
   "dependencies": {

@@ -66,14 +66,14 @@ node packages/cali/dist/index.js qa \
   --platform android \
   --artifact ./artifacts/app.apk
 
-# Render a compact GitHub comment
-node packages/cali/dist/index.js render-comment \
-  --report ./artifacts/qa/report.json \
-  --format github
-
-# Export EAS helper files
+# Export CI helper files from one report
 node packages/cali/dist/index.js export-ci \
   --report ./artifacts/qa/report.json
+
+# Export one combined CI comment from two platform reports
+node packages/cali/dist/index.js export-ci \
+  --android ./artifacts/android/report.json \
+  --ios ./artifacts/ios/report.json
 ```
 
 ## Provider setup
@@ -99,7 +99,6 @@ QA_MODEL=anthropic/claude-sonnet-4.6
 - For CI, prefer `cali qa --ci github-actions` or `cali qa --ci eas`.
 - Cali derives runtime context from provider env plus CLI overrides before the agent starts.
 - Use the explicit helper commands for integration glue:
-  - `render-comment`
   - `export-ci`
 - For copy-pasteable CI examples, use:
   - [`packages/cali/examples/github-actions/run-qa.sh`](../../../packages/cali/examples/github-actions/run-qa.sh)

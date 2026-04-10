@@ -5,25 +5,33 @@ import { readOptionalString } from './shared.js'
 
 type ExportCiCliOptions = {
   report?: string
+  android?: string
+  ios?: string
   outputDir?: string
 }
 
 export const exportCiCommandDefinition = {
   register(cli: CAC) {
     cli
-      .command('export-ci', 'Export shared CI helper files from a Cali report')
+      .command('export-ci', 'Export shared CI outputs from one or more Cali reports')
       .option('--report <path>', 'Path to report.json')
-      .option('--output-dir <path>', 'Output directory for exported helper files')
+      .option('--android <path>', 'Path to Android report.json for a multi-platform export')
+      .option('--ios <path>', 'Path to iOS report.json for a multi-platform export')
+      .option('--output-dir <path>', 'Output directory for exported CI outputs')
       .example('export-ci --report ./artifacts/qa/report.json')
+      .example(
+        'export-ci --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json'
+      )
       .action(async (options: unknown) => {
         const normalized = options as ExportCiCliOptions
         const reportPath = readOptionalString(normalized.report)
-        if (!reportPath) {
-          throw new Error('`export-ci` requires `--report <path>`.')
-        }
+        const androidReportPath = readOptionalString(normalized.android)
+        const iosReportPath = readOptionalString(normalized.ios)
 
         await exportCi({
           reportPath,
+          androidReportPath,
+          iosReportPath,
           outputDir: readOptionalString(normalized.outputDir),
         })
       })
