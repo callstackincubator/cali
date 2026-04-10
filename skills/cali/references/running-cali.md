@@ -73,7 +73,6 @@ node packages/cali/dist/index.js render-comment \
 
 # Export EAS helper files
 node packages/cali/dist/index.js export-ci \
-  --target eas \
   --report ./artifacts/qa/report.json
 ```
 

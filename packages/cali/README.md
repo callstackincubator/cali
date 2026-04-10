@@ -265,7 +265,7 @@ cali qa --ci eas --quiet --platform android --artifact ./artifacts/app.apk
 Optional helpers:
 
 ```bash
-cali export-ci --target eas --report ./artifacts/qa/report.json
+cali export-ci --report ./artifacts/qa/report.json
 cali render-comment --report ./artifacts/qa/report.json --format github
 cali render-comment --format github-multi-platform --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json
 ```
@@ -317,7 +317,7 @@ Minimal EAS example:
   run: node ./packages/cali/dist/index.js qa --ci eas --quiet
 
 - id: export_cali_ci
-  run: node ./packages/cali/dist/index.js export-ci --target eas --report ./artifacts/qa/report.json
+  run: node ./packages/cali/dist/index.js export-ci --report ./artifacts/qa/report.json
 ```
 
 Reference wrapper:
@@ -399,7 +399,7 @@ Built bundle:
 - `bun run perf-review:env:mobile-pr -- --context ./cali-context.json`
 - `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
 - `bun run render-comment -- --report ./artifacts/qa/report.json`
-- `bun run export-ci:eas -- --report ./artifacts/qa/report.json`
+- `bun run export-ci -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
 
@@ -427,13 +427,13 @@ The default output directory is `artifacts/<command>`.
 
 For `qa`, Cali writes this output contract even for blocked runs during CI/bootstrap startup, as long as the output directory itself is writable.
 
-`export-ci --target eas` writes a smaller provider helper contract:
+`export-ci` writes a smaller shared CI helper contract:
 
-- `eas-status.txt`
-- `eas-section-body.md`
-- `eas-output.json`
+- `ci-status.txt`
+- `ci-section-body.md`
+- `ci-output.json`
 
-`eas-output.json` combines:
+`ci-output.json` combines:
 
 - `status`
 - `statusLabel`

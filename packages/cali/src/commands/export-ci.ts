@@ -7,12 +7,11 @@ import type { CommandReport } from '../report/types.js'
 import { ensureDirectory, resolveFromCwd } from '../utils.js'
 
 export type ExportCiOptions = {
-  target: 'eas'
   reportPath: string
   outputDir?: string
 }
 
-type EasExportSummary = {
+type CiExportSummary = {
   status: CommandReport['overallStatus']
   statusLabel: string
   summary: string
@@ -32,7 +31,7 @@ export async function exportCi(options: ExportCiOptions) {
 
   const topIssue =
     getTopIssue(report) ?? (report.overallStatus === 'passed' ? 'N/A' : report.summary)
-  const summary: EasExportSummary = {
+  const summary: CiExportSummary = {
     status: report.overallStatus,
     statusLabel: report.overallStatus,
     summary: report.summary,
@@ -41,13 +40,13 @@ export async function exportCi(options: ExportCiOptions) {
     screenshots: buildScreenshotsMetadata(report),
   }
 
-  await writeFile(path.join(outputDir, 'eas-status.txt'), `${report.overallStatus}\n`, 'utf8')
-  await writeFile(path.join(outputDir, 'eas-section-body.md'), renderCommandSection(report), 'utf8')
+  await writeFile(path.join(outputDir, 'ci-status.txt'), `${report.overallStatus}\n`, 'utf8')
+  await writeFile(path.join(outputDir, 'ci-section-body.md'), renderCommandSection(report), 'utf8')
   await writeFile(
-    path.join(outputDir, 'eas-output.json'),
+    path.join(outputDir, 'ci-output.json'),
     `${JSON.stringify(summary, null, 2)}\n`,
     'utf8'
   )
 
-  console.log(`Exported ${options.target} CI helpers to ${outputDir}`)
+  console.log(`Exported CI helpers to ${outputDir}`)
 }
