@@ -30,8 +30,7 @@
     "dev:perf-review": "node --import=tsx ./src/cli.ts perf-review",
     "dev:dev-command": "node --import=tsx ./src/cli.ts dev",
     "render-comment": "node ./dist/index.js render-comment --format github",
-    "export-ci:eas": "node ./dist/index.js export-ci --target eas",
-    "publish-comment": "node ./dist/index.js publish-comment --format github"
+    "export-ci:eas": "node ./dist/index.js export-ci --target eas"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

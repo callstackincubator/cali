@@ -268,7 +268,6 @@ Optional helpers:
 cali export-ci --target eas --report ./artifacts/qa/report.json
 cali render-comment --report ./artifacts/qa/report.json --format github
 cali render-comment --format github-multi-platform --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json
-cali publish-comment --report ./artifacts/qa/report.json
 ```
 
 ### GitHub Actions
@@ -288,7 +287,7 @@ Minimal GitHub Actions example:
   run: node ./packages/cali/dist/index.js qa --ci github-actions --quiet
 
 - name: Publish PR comment
-  run: node ./packages/cali/dist/index.js publish-comment --report ./artifacts/qa/report.json
+  run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ./artifacts/qa/comment-github.md
 ```
 
 Reference wrapper:
@@ -330,7 +329,11 @@ cali render-comment \
   --output ./artifacts/comment.md
 ```
 
-`publish-comment` uses the GitHub CLI, so make sure `gh` is available and authenticated in the job where you call it.
+If you want Cali to stay GitHub-agnostic, keep posting outside Cali and use the rendered output directly:
+
+```bash
+gh pr comment "$PR_NUMBER" --body-file ./artifacts/qa/comment-github.md
+```
 
 ## Config
 
@@ -392,7 +395,6 @@ Built bundle:
 - `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
 - `bun run render-comment -- --report ./artifacts/qa/report.json`
 - `bun run export-ci:eas -- --report ./artifacts/qa/report.json`
-- `bun run publish-comment -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:
 

@@ -102,7 +102,6 @@ QA_MODEL=anthropic/claude-sonnet-4.6
 - Use the explicit helper commands for integration glue:
   - `render-comment`
   - `export-ci`
-  - `publish-comment`
 - For copy-pasteable CI examples, use:
   - [`packages/cali/examples/github-actions/run-qa.sh`](../../../packages/cali/examples/github-actions/run-qa.sh)
   - [`packages/cali/examples/eas-workflows/run-qa.sh`](../../../packages/cali/examples/eas-workflows/run-qa.sh)
