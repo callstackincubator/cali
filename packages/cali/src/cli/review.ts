@@ -10,9 +10,9 @@ import {
 export const reviewCommandDefinition = {
   register(cli: CAC) {
     registerCommonCommandOptions(
-      cli.command('review', 'Run the mobile code review role (experimental)')
+      cli.command('review', 'Run the repository review role (experimental)')
     )
-      .example('review --env mobile-pr --context ./cali-context.json')
+      .example('review --context ./cali-context.json')
       .action(async (options: unknown) => {
         await runReviewCommand(normalizeBaseCommandCliOptions(options as BaseCommandOptions))
       })

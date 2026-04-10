@@ -1,6 +1,6 @@
 ---
 name: cali
-description: Use when working in the Cali repository or when you need to run, extend, or debug the Cali CLI for mobile React Native and Expo workflows. Covers Cali commands (`qa`, `review`, `perf-review`, `dev`), the shared `cali-context.json` contract, env selection, required local CLIs, provider setup, and CI integration patterns.
+description: Use when working in the Cali repository or when you need to run, extend, or debug the Cali CLI for mobile React Native and Expo workflows. Covers Cali commands (`qa`, `review`, `perf-review`, `dev`), the shared `cali-context.json` contract, local mode selection, required local CLIs, provider setup, and CI integration patterns.
 ---
 
 # Cali
@@ -21,7 +21,7 @@ Use this skill as a router with mandatory defaults. Read this file first. For no
 1. Load [references/running-cali.md](references/running-cali.md).
 2. If the task changes implementation or runtime behavior, then load [references/extending-cali.md](references/extending-cali.md).
 3. Confirm which command is actually in scope before changing code or docs.
-4. Keep the task aligned to the current runtime model: command + env + shared context + tool packs + publishers.
+4. Keep the task aligned to the current runtime model: command + local/CI mode + shared context + tool packs + publishers.
 
 ## Command surface
 
@@ -34,11 +34,10 @@ Use this skill as a router with mandatory defaults. Read this file first. For no
 - `cali dev`
   - experimental repository-backed implementation flow
 
-## Built-in envs
+## Runtime modes
 
-- `mobile-pr`
-- `local-android`
-- `local-ios`
+- local mobile: `--local android|ios`
+- CI: implicit provider detection in GitHub Actions and EAS, with optional `--ci github-actions|eas` override
 
 ## Required references
 

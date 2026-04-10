@@ -15,20 +15,12 @@ Use this reference for normal Cali usage, setup, and CI wiring.
 
 ## Runtime model
 
-- `env` is the only preset concept
+- local mobile runs use `--local android|ios`
+- CI runs use implicit provider detection in GitHub Actions and EAS
 - all commands use one shared `cali-context.json`
 - flags override context values
 
-For `qa`, use:
-- `--env local-android` or `--env local-ios` for local runs
-- `--ci github-actions` or `--ci eas` for CI runs
-
-Built-in envs:
-
-- `mobile-pr`
-- `eas-mobile-pr`
-- `local-android`
-- `local-ios`
+Use `--ci github-actions|eas` only when you need to override provider detection.
 
 ## Required local binaries
 
@@ -48,27 +40,40 @@ node packages/cali/dist/index.js qa --help
 
 # Local iOS QA
 node packages/cali/dist/index.js qa \
-  --env local-ios \
+  --local ios \
   --artifact ./artifacts/MyApp.app \
   --prompt "verify onboarding copy on Screen B"
 
 # Local Android QA
 node packages/cali/dist/index.js qa \
-  --env local-android \
+  --local android \
   --artifact ./artifacts/app.apk \
   --prompt "verify onboarding copy on Screen B"
 
 # CI-style QA
 node packages/cali/dist/index.js qa \
-  --ci github-actions \
   --platform ios \
   --artifact ./artifacts/MyApp.app
 
 # EAS-style QA
 node packages/cali/dist/index.js qa \
-  --ci eas \
   --platform android \
   --artifact ./artifacts/app.apk
+
+# CI-style review
+node packages/cali/dist/index.js review \
+  --context ./cali-context.json
+
+# CI-style performance review
+node packages/cali/dist/index.js perf-review \
+  --context ./cali-context.json \
+  --platform android \
+  --artifact ./artifacts/app.apk
+
+# CI-style dev command
+node packages/cali/dist/index.js dev \
+  --context ./cali-context.json \
+  --prompt "implement issue 123"
 
 # Export CI helper files from one report
 node packages/cali/dist/index.js export-ci \
@@ -100,8 +105,8 @@ QA_MODEL=anthropic/claude-sonnet-4.6
 
 ## CI notes
 
-- For CI, prefer `cali qa --ci github-actions` or `cali qa --ci eas`.
-- `cali qa --env mobile-pr` and `cali qa --env eas-mobile-pr` are intentionally not supported.
+- In GitHub Actions and EAS, Cali detects the provider automatically.
+- Use `--ci github-actions|eas` only to override provider detection.
 - Cali derives runtime context from provider env plus CLI overrides before the agent starts.
 - Use the explicit helper commands for integration glue:
   - `export-ci`

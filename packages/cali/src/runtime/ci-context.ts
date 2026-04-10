@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 
 import { DOCS_URLS } from '../docs.js'
 import { detectRepositoryContext, sanitizeUrl } from './context-repo.js'
-import type { CaliContext, CaliPlatform } from './types.js'
+import type { CaliContext, CaliPlatform, CommandId } from './types.js'
 
 export type CiProvider = 'github-actions' | 'eas'
 
@@ -21,6 +21,25 @@ type BuildCiContextOptions = {
 function readOptionalEnv(name: string) {
   const value = process.env[name]
   return value && value.length > 0 ? value : undefined
+}
+
+export function detectCiProvider(): CiProvider | undefined {
+  if (process.env.GITHUB_ACTIONS === 'true' || readOptionalEnv('GITHUB_EVENT_PATH')) {
+    return 'github-actions'
+  }
+
+  if (
+    process.env.EAS_BUILD === 'true' ||
+    readOptionalEnv('APP_PATH') ||
+    readOptionalEnv('QA_PLATFORM') ||
+    readOptionalEnv('PR_JSON') ||
+    readOptionalEnv('BUILD_ID') ||
+    readOptionalEnv('WORKFLOW_URL')
+  ) {
+    return 'eas'
+  }
+
+  return undefined
 }
 
 function normalizePlatform(value: string | undefined): CaliPlatform | undefined {
@@ -90,11 +109,12 @@ function readPullRequestJson(rawPrJson: string | undefined) {
 }
 
 function createCommonContext(options: {
+  commandId: CommandId
   workspaceRoot: string
   repository?: CaliContext['repository']
   pullRequest?: CaliContext['pullRequest']
-  platform: CaliPlatform
-  artifactPath: string
+  platform?: CaliPlatform
+  artifactPath?: string
   appId?: string
   deviceName?: string
   outputDir: string
@@ -106,12 +126,15 @@ function createCommonContext(options: {
     workspaceRoot: options.workspaceRoot,
     repository: options.repository,
     pullRequest: options.pullRequest,
-    mobile: {
-      platform: options.platform,
-      artifactPath: options.artifactPath,
-      appId: options.appId,
-      deviceName: options.deviceName,
-    },
+    mobile:
+      options.commandId === 'qa' || options.commandId === 'perf-review'
+        ? {
+            platform: options.platform,
+            artifactPath: options.artifactPath,
+            appId: options.appId,
+            deviceName: options.deviceName,
+          }
+        : undefined,
     build:
       options.buildId || options.workflowUrl || options.logsUrl
         ? {
@@ -127,6 +150,7 @@ function createCommonContext(options: {
 }
 
 async function buildGithubActionsContext(
+  commandId: CommandId,
   cwd: string,
   options: BuildCiContextOptions
 ): Promise<Partial<CaliContext>> {
@@ -138,7 +162,8 @@ async function buildGithubActionsContext(
   const event = await loadJsonFile(eventPath)
   const detectedRepository = await detectRepositoryContext(cwd)
   const githubRepository = resolveGithubRepositoryContext()
-  const outputDir = options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? './artifacts/qa'
+  const outputDir =
+    options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? `./artifacts/${commandId}`
   const buildId = options.buildId ?? readOptionalEnv('GITHUB_RUN_ID')
   const platform = options.platform ?? normalizePlatform(readOptionalEnv('CALI_PLATFORM'))
   const artifactPath = options.artifactPath ?? readOptionalEnv('CALI_ARTIFACT_PATH')
@@ -150,15 +175,20 @@ async function buildGithubActionsContext(
       ? `${serverUrl}/${repositoryName}/actions/runs/${buildId}`
       : undefined)
 
-  if (!platform) {
-    throw createCiContextError('GitHub Actions CI mode requires CALI_PLATFORM or --platform.')
+  if ((commandId === 'qa' || commandId === 'perf-review') && !platform) {
+    throw createCiContextError(
+      'GitHub Actions CI mode requires CALI_PLATFORM or --platform for mobile commands.'
+    )
   }
 
-  if (!artifactPath) {
-    throw createCiContextError('GitHub Actions CI mode requires CALI_ARTIFACT_PATH or --artifact.')
+  if ((commandId === 'qa' || commandId === 'perf-review') && !artifactPath) {
+    throw createCiContextError(
+      'GitHub Actions CI mode requires CALI_ARTIFACT_PATH or --artifact for mobile commands.'
+    )
   }
 
   return createCommonContext({
+    commandId,
     workspaceRoot: options.workspaceRoot ?? readOptionalEnv('GITHUB_WORKSPACE') ?? cwd,
     repository: {
       ...detectedRepository.repository,
@@ -177,24 +207,29 @@ async function buildGithubActionsContext(
 }
 
 async function buildEasContext(
+  commandId: CommandId,
   cwd: string,
   options: BuildCiContextOptions
 ): Promise<Partial<CaliContext>> {
   const detectedRepository = await detectRepositoryContext(cwd)
   const githubRepository = resolveGithubRepositoryContext()
-  const outputDir = options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? './artifacts/qa'
+  const outputDir =
+    options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? `./artifacts/${commandId}`
   const artifactPath = options.artifactPath ?? readOptionalEnv('APP_PATH')
   const platform = options.platform ?? normalizePlatform(readOptionalEnv('QA_PLATFORM'))
 
-  if (!artifactPath) {
-    throw createCiContextError('EAS CI mode requires APP_PATH or --artifact.')
+  if ((commandId === 'qa' || commandId === 'perf-review') && !artifactPath) {
+    throw createCiContextError('EAS CI mode requires APP_PATH or --artifact for mobile commands.')
   }
 
-  if (!platform) {
-    throw createCiContextError('EAS CI mode requires QA_PLATFORM or --platform.')
+  if ((commandId === 'qa' || commandId === 'perf-review') && !platform) {
+    throw createCiContextError(
+      'EAS CI mode requires QA_PLATFORM or --platform for mobile commands.'
+    )
   }
 
   return createCommonContext({
+    commandId,
     workspaceRoot: options.workspaceRoot ?? cwd,
     repository: {
       ...detectedRepository.repository,
@@ -213,13 +248,14 @@ async function buildEasContext(
 }
 
 export async function buildCiContext(
+  commandId: CommandId,
   cwd: string,
   provider: CiProvider,
   options: BuildCiContextOptions
 ): Promise<Partial<CaliContext>> {
   if (provider === 'github-actions') {
-    return buildGithubActionsContext(cwd, options)
+    return buildGithubActionsContext(commandId, cwd, options)
   }
 
-  return buildEasContext(cwd, options)
+  return buildEasContext(commandId, cwd, options)
 }

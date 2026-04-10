@@ -3,10 +3,10 @@ import path from 'node:path'
 import { tool } from 'ai'
 import { z } from 'zod'
 
-import { loadCommandConfig, resolveDefaultEnvName } from '../config/load.js'
+import { loadCommandConfig, resolveDefaultLocalPlatform } from '../config/load.js'
 import type { ToolPackName } from '../config/schema.js'
 import type { CommandReport } from '../report/types.js'
-import { buildCiContext } from '../runtime/ci-context.js'
+import { buildCiContext, detectCiProvider } from '../runtime/ci-context.js'
 import { resolveCommandContext } from '../runtime/context.js'
 import {
   bootstrapMobileApp,
@@ -107,18 +107,19 @@ export function formatAgentFinishDetail(event: AgentFinishEvent) {
 
 export async function loadRunContext(commandId: CommandId, cli: CommandCliOptions) {
   const cwd = process.cwd()
+  const ciProvider = cli.localPlatform ? undefined : (cli.ciProvider ?? detectCiProvider())
   printPhase('Resolving config')
 
   const config = await loadCommandConfig({
     commandId,
     cwd,
     configPath: cli.configPath,
-    envName: cli.envName,
-    ciProvider: cli.ciProvider,
+    localPlatform: cli.localPlatform,
+    ciProvider,
     model: cli.model,
   })
-  const injectedContext = cli.ciProvider
-    ? await buildCiContext(cwd, cli.ciProvider, {
+  const injectedContext = ciProvider
+    ? await buildCiContext(commandId, cwd, ciProvider, {
         workspaceRoot: cli.workspaceRoot,
         platform: cli.platform,
         artifactPath: cli.artifactPath,
@@ -134,6 +135,7 @@ export async function loadRunContext(commandId: CommandId, cli: CommandCliOption
 
   return {
     cwd,
+    ciProvider,
     config,
     context,
   }
@@ -144,8 +146,8 @@ function createFallbackConfig(
   cwd: string,
   cli: CommandCliOptions
 ): CommandResolvedConfig {
+  const ciProvider = cli.localPlatform ? undefined : (cli.ciProvider ?? detectCiProvider())
   return {
-    envName: cli.envName ?? resolveDefaultEnvName(commandId, cli.ciProvider),
     workspaceRoot: cli.workspaceRoot ? resolveFromCwd(cwd, cli.workspaceRoot) : cwd,
     contextPath: undefined,
     skillPaths: [],
@@ -153,7 +155,11 @@ function createFallbackConfig(
     outputPublishers: ['file'],
     extraInstructions: [],
     model: cli.model ?? process.env.QA_MODEL ?? 'openai/gpt-5.4-mini',
-    mobileDefaults: {},
+    mobileDefaults: {
+      platform: ciProvider
+        ? undefined
+        : (cli.localPlatform ?? resolveDefaultLocalPlatform(commandId)),
+    },
   }
 }
 
@@ -168,10 +174,7 @@ function createFallbackContext(
     workspaceRoot,
     cli.outputDir ?? path.join('artifacts', commandId)
   )
-  const platform =
-    cli.platform ??
-    config.mobileDefaults.platform ??
-    (config.envName === 'local-ios' ? 'ios' : undefined)
+  const platform = cli.platform ?? config.mobileDefaults.platform ?? cli.localPlatform
 
   return {
     workspaceRoot,
@@ -372,10 +375,11 @@ export async function runMobileStructuredCommand<TReportInput, TReport extends C
 
   try {
     const loaded = await loadRunContext(commandId, cli)
+    const localMode = !loaded.ciProvider
     config = loaded.config
     context = loaded.context
 
-    mobileContext = await resolveMobileRuntimeContext(commandId, config.envName, context)
+    mobileContext = await resolveMobileRuntimeContext(commandId, localMode, context)
     sessionName = createAgentDeviceSessionName(mobileContext.platform)
 
     printPhase(
@@ -385,7 +389,7 @@ export async function runMobileStructuredCommand<TReportInput, TReport extends C
     await prepareMobileOutputDirectories(mobileContext)
 
     printPhase('Bootstrapping app', mobileContext.artifactPath)
-    await bootstrapMobileApp(commandId, config.envName, mobileContext, sessionName)
+    await bootstrapMobileApp(commandId, localMode, mobileContext, sessionName)
     printPhase('Bootstrap complete')
 
     printPhase('Preparing tool packs', config.enabledToolPacks.join(', '))

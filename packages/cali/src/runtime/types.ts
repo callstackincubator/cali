@@ -1,9 +1,8 @@
-import type { CaliEnvName, PublisherName, ToolPackName } from '../config/schema.js'
+import type { CaliPlatform, PublisherName, ToolPackName } from '../config/schema.js'
 import type { CiProvider } from './ci-context.js'
 export type { CommandId } from '../config/schema.js'
+export type { CaliPlatform } from '../config/schema.js'
 export type CommandConfigKey = 'qa' | 'review' | 'perfReview' | 'dev'
-
-export type CaliPlatform = 'android' | 'ios'
 
 export type RepositoryContext = {
   provider?: string
@@ -100,7 +99,7 @@ export type MobileCommandRuntimeContext = {
 
 export type CommandCliOptions = {
   ciProvider?: CiProvider
-  envName?: CaliEnvName
+  localPlatform?: CaliPlatform
   configPath?: string
   prompt?: string
   contextPath?: string
@@ -127,7 +126,6 @@ export type CommandCliOptions = {
 }
 
 export type CommandResolvedConfig = {
-  envName: CaliEnvName
   workspaceRoot?: string
   contextPath?: string
   skillPaths: string[]

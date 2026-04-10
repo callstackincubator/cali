@@ -10,10 +10,14 @@ import {
 export const perfReviewCommandDefinition = {
   register(cli: CAC) {
     registerCommonMobileOptions(
-      cli.command('perf-review', 'Run the mobile performance review role (experimental)')
+      cli.command('perf-review', 'Run the mobile performance review role (experimental)'),
+      'Local mobile mode: android or ios'
     )
       .example(
-        'perf-review --env mobile-pr --context ./cali-context.json --prompt "profile the checkout flow"'
+        'perf-review --local ios --artifact ./artifacts/MyApp.app --prompt "profile the checkout flow"'
+      )
+      .example(
+        'perf-review --context ./cali-context.json --platform android --artifact ./artifacts/app.apk --prompt "profile the checkout flow"'
       )
       .action(async (options: unknown) => {
         await runPerfReviewCommand(normalizeBaseCommandCliOptions(options as BaseCommandOptions))

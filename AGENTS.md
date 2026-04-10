@@ -69,18 +69,11 @@ Current maturity:
 
 ## Core Contracts
 
-### Env
+### Local Mode
 
-`env` is the only preset concept.
+Use `--local android|ios` for local mobile runs.
 
-Built-in envs:
-
-- `mobile-pr`
-- `eas-mobile-pr`
-- `local-android`
-- `local-ios`
-
-An env sets defaults such as tool packs, publishers, and mobile defaults. It must not introduce workflow-specific runtime scraping.
+CI metadata is detected automatically in GitHub Actions and EAS. Use `--ci github-actions|eas` only when you need to override detection.
 
 ### Context
 
@@ -121,8 +114,8 @@ Required skill guidance should be preloaded through the tool-pack registry when 
 
 - Bootstrap stays outside the role in the command module.
 - The role inspects the app and writes a structured QA report.
-- Use `--ci github-actions|eas` for CI runs.
-- Use `--env local-android|local-ios` for local runs.
+- Use `--local android|ios` for local runs.
+- In GitHub Actions and EAS, CI provider detection is automatic; `--ci` is only an override.
 - Requires `agent-device` on `PATH`.
 - Mobile runs use a unique per-run `agent-device` session. Do not reuse ambient sessions.
 - Local envs are convenience-first: try `open --relaunch` before reinstalling.
@@ -137,18 +130,22 @@ Required skill guidance should be preloaded through the tool-pack registry when 
 ### `review`
 
 - No code changes.
+- In GitHub Actions and EAS, CI-derived repository and PR metadata is detected automatically. Use `--ci` only to override detection.
 - Findings first.
 - Prefer repository/diff evidence over generic advice.
 
 ### `perf-review`
 
 - Uses both `agent-device` and `react-devtools`.
+- Use `--local android|ios` for local runs.
+- In GitHub Actions and EAS, CI provider detection is automatic; `--ci` is only an override.
 - Requires `agent-device` and `agent-react-devtools` on `PATH`.
 - Focus on runtime evidence, not speculative optimizations.
 
 ### `dev`
 
 - Smallest code change that solves the task.
+- In GitHub Actions and EAS, CI-derived repository and PR metadata is detected automatically. Use `--ci` only to override detection.
 - Repository tools rely on `git`, `rg`, and `zsh` being available.
 - Respect `context.dev.writePolicy` and `context.dev.pushPolicy`.
 
@@ -179,6 +176,8 @@ Built bundle:
 - `bun run review -- --help`
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
+- `bun run qa:local:android -- --artifact ./artifacts/app.apk`
+- `bun run qa:local:ios -- --artifact ./artifacts/MyApp.app`
 - `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
 - `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
 - `bun run export-ci -- --report ./artifacts/qa/report.json`

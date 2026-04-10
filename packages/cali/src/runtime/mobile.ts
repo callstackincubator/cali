@@ -4,7 +4,6 @@ import { homedir } from 'node:os'
 import path from 'node:path'
 import { TextDecoder } from 'node:util'
 
-import type { CaliEnvName } from '../config/schema.js'
 import type { ScreenshotInfo } from '../report/types.js'
 import { getAgentDeviceSessionArgs } from '../tools/agent-device.js'
 import { ensureCommandExists, ensureDirectory, runCommand } from '../utils.js'
@@ -517,12 +516,12 @@ async function resolveLocalAndroidDeviceName(explicitDeviceName?: string) {
 
   if (bootedDevices.length > 1) {
     throw new Error(
-      `local-android requires --device when more than one Android target is booted.\n\nBooted targets:\n- ${bootedDevices.join('\n- ')}`
+      `Local Android mode requires --device when more than one Android target is booted.\n\nBooted targets:\n- ${bootedDevices.join('\n- ')}`
     )
   }
 
   throw new Error(
-    'local-android requires a booted Android device or emulator. Boot one first or pass --device so Cali can provision it deterministically.'
+    'Local Android mode requires a booted Android device or emulator. Boot one first or pass --device so Cali can provision it deterministically.'
   )
 }
 
@@ -542,11 +541,11 @@ async function resolveLocalIosDeviceName(explicitDeviceName?: string) {
 
   if (bootedSimulators.length > 1) {
     throw new Error(
-      `local-ios requires --device when more than one iOS simulator is booted.\n\nBooted simulators:\n- ${bootedSimulators.join('\n- ')}`
+      `Local iOS mode requires --device when more than one iOS simulator is booted.\n\nBooted simulators:\n- ${bootedSimulators.join('\n- ')}`
     )
   }
 
-  throw new Error('local-ios requires --device or exactly one booted iOS simulator.')
+  throw new Error('Local iOS mode requires --device or exactly one booted iOS simulator.')
 }
 
 async function ensureTargetReady(context: MobileCommandRuntimeContext) {
@@ -605,10 +604,6 @@ async function installFreshArtifact(
   )
 }
 
-function isLocalEnv(envName: CaliEnvName) {
-  return envName === 'local-android' || envName === 'local-ios'
-}
-
 export function createAgentDeviceSessionName(platform: CaliPlatform) {
   const hash = createHash('md5')
     .update(`${platform}:${process.cwd()}:${Date.now()}:${Math.random()}`)
@@ -620,7 +615,7 @@ export function createAgentDeviceSessionName(platform: CaliPlatform) {
 
 export async function resolveMobileRuntimeContext(
   commandId: CommandId,
-  envName: CaliEnvName,
+  localMode: boolean,
   context: CaliContext
 ): Promise<MobileCommandRuntimeContext> {
   await ensureCommandExists('agent-device', 'npm i -g agent-device')
@@ -659,9 +654,9 @@ export async function resolveMobileRuntimeContext(
   }
 
   let deviceName = context.mobile?.deviceName
-  if (envName === 'local-ios') {
+  if (localMode && platform === 'ios') {
     deviceName = await resolveLocalIosDeviceName(deviceName)
-  } else if (envName === 'local-android') {
+  } else if (localMode && platform === 'android') {
     deviceName = await resolveLocalAndroidDeviceName(deviceName)
   }
 
@@ -677,13 +672,13 @@ export async function resolveMobileRuntimeContext(
 
 export async function bootstrapMobileApp(
   commandId: 'qa' | 'perf-review',
-  envName: CaliEnvName,
+  localMode: boolean,
   context: MobileCommandRuntimeContext,
   sessionName: string
 ) {
   await ensureTargetReady(context)
 
-  if (isLocalEnv(envName)) {
+  if (localMode) {
     const openResult = await openAppSession(sessionName, context, {
       allowFailure: true,
     })

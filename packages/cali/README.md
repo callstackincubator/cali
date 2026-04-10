@@ -3,7 +3,8 @@
 Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It runs first-class agent commands on top of a shared runtime model:
 
 - commands: `qa`, `review`, `perf-review`, `dev`
-- envs: `mobile-pr`, `eas-mobile-pr`, `local-android`, `local-ios`
+- local mobile mode: `--local android|ios`
+- CI mode: implicit detection with optional `--ci github-actions|eas` override
 - one shared `cali-context.json` runtime contract
 - explicit tool packs per command
 - publisher-based outputs
@@ -12,7 +13,7 @@ Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It ru
 ## Core Concepts
 
 - command: the user-facing role entrypoint such as `cali qa` or `cali review`
-- env: default runtime shape for a command; for `qa`, use local envs only and prefer `--ci` in CI
+- local: local mobile mode selector for `qa` and `perf-review`
 - context file: the optional explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
 - tool pack: a bounded capability surface such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
 - publisher: how reports are exposed after a run, such as `file` or `blob`
@@ -92,7 +93,7 @@ For safety, Cali sanitizes credential-bearing repository URLs when loading conte
 
 ```bash
 cali qa \
-  --env local-ios \
+  --local ios \
   --artifact ./artifacts/MyApp.app \
   --prompt "verify the onboarding copy on Screen B"
 ```
@@ -101,18 +102,18 @@ Local mobile behavior:
 
 - each run gets a unique `agent-device` session name such as `ios-a1b2c`
 - local Android reuses the single booted emulator/device when exactly one is available, otherwise pass `--device`
-- local envs try `open --relaunch` before reinstalling
-- `local-ios` reuses the single booted simulator when exactly one is available, otherwise pass `--device`
+- local runs try `open --relaunch` before reinstalling
+- local iOS reuses the single booted simulator when exactly one is available, otherwise pass `--device`
 
-### CI-native QA or review
+### CI-native commands
 
 ```bash
-cali qa --ci github-actions --platform ios --artifact ./artifacts/MyApp.app
-cali qa --ci eas --platform android --artifact ./artifacts/app.apk
-cali review --env mobile-pr --context ./cali-context.json
+cali qa --platform ios --artifact ./artifacts/MyApp.app
+cali qa --platform android --artifact ./artifacts/app.apk
+cali review --context ./cali-context.json
 ```
 
-`cali qa` no longer supports `--env mobile-pr` or `--env eas-mobile-pr`. Use `--ci github-actions|eas` for CI runs.
+In GitHub Actions and EAS, Cali detects the provider automatically from the environment. Use `--ci` only to override detection. Use `--local android|ios` for local mobile runs.
 
 Use `--quiet` to suppress the retro banner in scripted environments. Cali also suppresses the banner automatically when `CI=true`.
 
@@ -120,15 +121,16 @@ Use `--quiet` to suppress the retro banner in scripted environments. Cali also s
 
 ```bash
 cali perf-review \
-  --env mobile-pr \
   --context ./cali-context.json \
+  --platform android \
+  --artifact ./artifacts/app.apk \
   --prompt "profile the checkout flow"
 ```
 
 ### Repo-backed implementation
 
 ```bash
-cali dev --env mobile-pr --context ./cali-context.json --prompt "implement issue 123"
+cali dev --context ./cali-context.json --prompt "implement issue 123"
 ```
 
 ## Provider Setup
@@ -214,14 +216,14 @@ npx skills add callstackincubator/agent-skills --agent codex --skill react-devto
 
 ## CI Providers
 
-The CI-native entrypoint is `cali qa --ci <provider>`.
+The CI-native entrypoint is `cali <command>`, with provider detection handled automatically in GitHub Actions and EAS. Use `--ci <provider>` only to override detection.
 
 Supported providers:
 
 - `github-actions`
 - `eas`
 
-For CI runs, Cali derives runtime context from provider env plus CLI overrides. You no longer need a separate `write-mobile-pr-context` step.
+For CI runs, Cali derives runtime context from provider env plus CLI overrides directly inside the command.
 
 Required provider inputs:
 
@@ -247,8 +249,8 @@ Required provider inputs:
 Core CI command:
 
 ```bash
-cali qa --ci github-actions --quiet --platform ios --artifact ./artifacts/MyApp.app
-cali qa --ci eas --quiet --platform android --artifact ./artifacts/app.apk
+cali qa --quiet --platform ios --artifact ./artifacts/MyApp.app
+cali qa --quiet --platform android --artifact ./artifacts/app.apk
 ```
 
 Optional helpers:
@@ -272,7 +274,7 @@ Minimal GitHub Actions example:
     CALI_PLATFORM: android
     CALI_ARTIFACT_PATH: ${{ steps.download_build.outputs.artifact_path }}
     CALI_APP_ID: com.example.myapp
-  run: node ./packages/cali/dist/index.js qa --ci github-actions --quiet
+  run: node ./packages/cali/dist/index.js qa --quiet
 
 - name: Export CI comment
   run: node ./packages/cali/dist/index.js export-ci --report ./artifacts/qa/report.json
@@ -305,7 +307,7 @@ Minimal EAS example:
     BUILD_ID: ${{ env.BUILD_ID }}
     WORKFLOW_URL: ${{ workflow.url }}
     PR_JSON: ${{ toJSON(github.event.pull_request) }}
-  run: node ./packages/cali/dist/index.js qa --ci eas --quiet
+  run: node ./packages/cali/dist/index.js qa --quiet
 
 - id: export_cali_ci
   run: node ./packages/cali/dist/index.js export-ci --report ./artifacts/qa/report.json
@@ -337,12 +339,14 @@ Create `cali.config.ts` in the project root:
 ```ts
 export default {
   defaultCommand: 'qa',
-  env: 'mobile-pr',
   workspaceRoot: '.',
   skillPaths: ['.agents/skills'],
   commands: {
     qa: {
       contextPath: './cali-context.json',
+      mobileDefaults: {
+        platform: 'android',
+      },
       extraInstructions: ['Prioritize auth and onboarding flows.'],
     },
     review: {
@@ -382,11 +386,13 @@ Built bundle:
 - `bun run review -- --help`
 - `bun run perf-review -- --help`
 - `bun run dev:command -- --help`
+- `bun run qa:local:android -- --artifact ./artifacts/app.apk`
+- `bun run qa:local:ios -- --artifact ./artifacts/MyApp.app`
 - `bun run qa:ci:gha -- --platform android --artifact ./artifacts/app.apk`
 - `bun run qa:ci:eas -- --platform ios --artifact ./artifacts/MyApp.app`
-- `bun run review:env:mobile-pr -- --context ./cali-context.json`
-- `bun run perf-review:env:mobile-pr -- --context ./cali-context.json`
-- `bun run dev:command:env:mobile-pr -- --context ./cali-context.json`
+- `bun run review -- --context ./cali-context.json`
+- `bun run perf-review -- --context ./cali-context.json --platform android --artifact ./artifacts/app.apk`
+- `bun run dev:command -- --context ./cali-context.json`
 - `bun run export-ci -- --report ./artifacts/qa/report.json`
 
 Source/dev loop:

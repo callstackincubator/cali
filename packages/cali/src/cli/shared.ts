@@ -1,9 +1,10 @@
+import { CaliPlatformSchema } from '../config/schema.js'
 import type { CommandCliOptions } from '../runtime/types.js'
 import { normalizePlatform } from '../utils.js'
 
 export type BaseCommandOptions = {
   ci?: string
-  env?: string
+  local?: string
   config?: string
   prompt?: string
   context?: string
@@ -49,14 +50,30 @@ export function readOptionalNumber(value: unknown, flagName: string) {
 export function normalizeBaseCommandCliOptions(options: BaseCommandOptions): CommandCliOptions {
   const platformValue = readOptionalString(options.platform)
   const platform = platformValue ? normalizePlatform(platformValue) : undefined
+  const localValue = readOptionalString(options.local)
+  const localResult = localValue ? CaliPlatformSchema.safeParse(localValue) : undefined
+  const localPlatform = localResult?.success ? localResult.data : undefined
+  const ciProvider = readOptionalString(options.ci) as CommandCliOptions['ciProvider']
 
   if (platformValue && !platform) {
     throw new Error('`--platform` must be `android` or `ios`.')
   }
 
+  if (localValue && !localPlatform) {
+    throw new Error('`--local` must be `android` or `ios`.')
+  }
+
+  if (ciProvider && ciProvider !== 'github-actions' && ciProvider !== 'eas') {
+    throw new Error('`--ci` must be `github-actions` or `eas`.')
+  }
+
+  if (localPlatform && ciProvider) {
+    throw new Error('Do not combine `--local` with `--ci`.')
+  }
+
   return {
-    ciProvider: readOptionalString(options.ci) as CommandCliOptions['ciProvider'],
-    envName: readOptionalString(options.env) as CommandCliOptions['envName'],
+    ciProvider,
+    localPlatform,
     configPath: readOptionalString(options.config),
     prompt: readOptionalString(options.prompt),
     contextPath: readOptionalString(options.context),
@@ -83,12 +100,9 @@ export function normalizeBaseCommandCliOptions(options: BaseCommandOptions): Com
   }
 }
 
-export function registerCommonCommandOptions(command: any, envDescription?: string) {
+export function registerCommonCommandOptions(command: any) {
   return command
-    .option(
-      '--env <name>',
-      envDescription ?? 'Built-in env: mobile-pr, eas-mobile-pr, local-android, local-ios'
-    )
+    .option('--ci <provider>', 'Override CI provider detection: github-actions or eas')
     .option('--config <path>', 'Path to cali.config.ts')
     .option('--prompt <text>', 'Add task-specific intent')
     .option('--context <path>', 'Load shared Cali runtime context from JSON')
@@ -110,9 +124,10 @@ export function registerCommonCommandOptions(command: any, envDescription?: stri
     .option('--logs-url <url>', 'Logs URL')
 }
 
-export function registerCommonMobileOptions(command: any, envDescription?: string) {
-  return registerCommonCommandOptions(command, envDescription)
-    .option('--platform <name>', 'android or ios')
+export function registerCommonMobileOptions(command: any, localDescription?: string) {
+  return registerCommonCommandOptions(command)
+    .option('--local <platform>', localDescription ?? 'Local mobile mode: android or ios')
+    .option('--platform <name>', 'Override platform: android or ios')
     .option('--artifact <path>', 'App artifact path (.apk, .aab, .app, .ipa)')
     .option('--app-id <id>', 'Optional application identifier / package name override')
     .option('--device <name>', 'Simulator or emulator name to provision')

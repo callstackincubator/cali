@@ -11,41 +11,30 @@ import { asArray, resolveFromCwd, uniqueStrings } from '../utils.js'
 import type {
   CaliCommandConfig,
   CaliConfig,
-  CaliEnvName,
+  CaliPlatform,
   CommandId,
   PublisherName,
 } from './schema.js'
-import { CaliConfigSchema, normalizeCaliEnvName } from './schema.js'
+import { CaliConfigSchema } from './schema.js'
 
 type LoadCommandConfigOptions = {
   commandId: CommandId
   cwd: string
   configPath?: string
-  envName?: CaliEnvName
+  localPlatform?: CaliPlatform
   ciProvider?: CiProvider
   model?: string
 }
 
-export function resolveDefaultEnvName(
-  commandId: CommandId,
-  ciProvider?: 'github-actions' | 'eas'
-): CaliEnvName {
-  if (ciProvider === 'eas') {
-    return 'eas-mobile-pr'
-  }
-
-  if (ciProvider === 'github-actions') {
-    return 'mobile-pr'
-  }
-
+export function resolveDefaultLocalPlatform(commandId: CommandId): CaliPlatform | undefined {
   switch (commandId) {
-    case 'review':
-    case 'dev':
-      return 'mobile-pr'
     case 'qa':
     case 'perf-review':
+      return 'android'
+    case 'review':
+    case 'dev':
     default:
-      return 'local-android'
+      return undefined
   }
 }
 
@@ -53,7 +42,7 @@ function getBuiltInSkillPaths(cwd: string) {
   return [path.join(cwd, '.agents', 'skills'), path.join(homedir(), '.agents', 'skills')]
 }
 
-const MOBILE_PR_QA_DEFAULTS: CaliCommandConfig = {
+const MOBILE_CI_QA_DEFAULTS: CaliCommandConfig = {
   enabledToolPacks: ['skills', 'agent-device'],
   outputPublishers: ['blob', 'file'],
   extraInstructions: [
@@ -62,74 +51,64 @@ const MOBILE_PR_QA_DEFAULTS: CaliCommandConfig = {
   ],
 }
 
-const QA_ENV_DEFAULTS: Record<CaliEnvName, CaliCommandConfig> = {
-  'mobile-pr': {
-    ...MOBILE_PR_QA_DEFAULTS,
-  },
-  'eas-mobile-pr': {
-    ...MOBILE_PR_QA_DEFAULTS,
-    extraInstructions: [
-      ...asArray(MOBILE_PR_QA_DEFAULTS.extraInstructions),
-      'This run is expected to execute in EAS-style CI with runtime context derived before the agent starts.',
-    ],
-  },
-  'local-ios': {
+function createLocalQaDefaults(platform: CaliPlatform): CaliCommandConfig {
+  return {
     enabledToolPacks: ['skills', 'agent-device'],
     outputPublishers: ['blob', 'file'],
     mobileDefaults: {
-      platform: 'ios',
+      platform,
     },
     extraInstructions: [
-      'This is a local iOS QA run. Keep the flow lightweight and focus on the highest-signal UI paths.',
+      `This is a local ${platform} QA run. Keep the flow lightweight and focus on the highest-signal UI paths.`,
     ],
-  },
-  'local-android': {
-    enabledToolPacks: ['skills', 'agent-device'],
-    outputPublishers: ['blob', 'file'],
-    mobileDefaults: {
-      platform: 'android',
-    },
-    extraInstructions: [
-      'This is a local Android QA run. Keep the flow lightweight and focus on the highest-signal UI paths.',
-    ],
-  },
+  }
 }
 
-function getEnvCommandDefaults(commandId: CommandId, envName: CaliEnvName): CaliCommandConfig {
+function getCommandDefaults(
+  commandId: CommandId,
+  options: {
+    localPlatform?: CaliPlatform
+    ciProvider?: CiProvider
+  }
+): CaliCommandConfig {
+  const { localPlatform, ciProvider } = options
   const commonOutputPublishers: PublisherName[] = ['file']
   const mobileOutputPublishers: PublisherName[] = ['blob', 'file']
 
   switch (commandId) {
     case 'qa':
-      return QA_ENV_DEFAULTS[envName]
+      if (ciProvider === 'eas') {
+        return {
+          ...MOBILE_CI_QA_DEFAULTS,
+          extraInstructions: [
+            ...asArray(MOBILE_CI_QA_DEFAULTS.extraInstructions),
+            'This run is expected to execute in EAS-style CI with runtime context derived before the agent starts.',
+          ],
+        }
+      }
+
+      if (ciProvider === 'github-actions') {
+        return { ...MOBILE_CI_QA_DEFAULTS }
+      }
+
+      return createLocalQaDefaults(localPlatform ?? 'android')
     case 'perf-review':
-      switch (envName) {
-        case 'mobile-pr':
-        case 'eas-mobile-pr':
-          return {
-            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
-            outputPublishers: mobileOutputPublishers,
-            extraInstructions: [
-              'Focus on high-signal runtime performance evidence such as rerenders, slow interactions, and component-level bottlenecks.',
-            ],
-          }
-        case 'local-ios':
-          return {
-            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
-            outputPublishers: mobileOutputPublishers,
-            mobileDefaults: {
-              platform: 'ios',
-            },
-          }
-        case 'local-android':
-        default:
-          return {
-            enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
-            outputPublishers: mobileOutputPublishers,
-            mobileDefaults: {
-              platform: 'android',
-            },
-          }
+      if (ciProvider) {
+        return {
+          enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
+          outputPublishers: mobileOutputPublishers,
+          extraInstructions: [
+            'Focus on high-signal runtime performance evidence such as rerenders, slow interactions, and component-level bottlenecks.',
+          ],
+        }
+      }
+
+      return {
+        enabledToolPacks: ['skills', 'agent-device', 'react-devtools', 'repo-read'],
+        outputPublishers: mobileOutputPublishers,
+        mobileDefaults: {
+          platform: localPlatform ?? 'android',
+        },
       }
     case 'review':
       return {
@@ -202,18 +181,18 @@ export async function loadCaliConfigFile(cwd: string, explicitPath?: string): Pr
 export async function loadCommandConfig(
   options: LoadCommandConfigOptions
 ): Promise<CommandResolvedConfig> {
-  const { commandId, cwd, configPath, envName: cliEnvName, ciProvider, model } = options
+  const { commandId, cwd, configPath, localPlatform, ciProvider, model } = options
   const fileConfig = await loadCaliConfigFile(cwd, configPath)
-  const envName =
-    cliEnvName ??
-    normalizeCaliEnvName(fileConfig.env) ??
-    resolveDefaultEnvName(commandId, ciProvider)
-  const envDefaults = getEnvCommandDefaults(commandId, envName)
+  const resolvedLocalPlatform =
+    ciProvider != null ? undefined : (localPlatform ?? resolveDefaultLocalPlatform(commandId))
+  const envDefaults = getCommandDefaults(commandId, {
+    localPlatform: resolvedLocalPlatform,
+    ciProvider,
+  })
   const commandConfig = getCommandConfig(fileConfig, COMMAND_CONFIG_KEYS[commandId])
   const merged = mergeCommandConfig(envDefaults, commandConfig)
 
   return {
-    envName,
     workspaceRoot: fileConfig.workspaceRoot
       ? resolveFromCwd(cwd, fileConfig.workspaceRoot)
       : undefined,
