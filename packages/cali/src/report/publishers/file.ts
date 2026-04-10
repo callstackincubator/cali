@@ -3,12 +3,7 @@ import path from 'node:path'
 
 import { sanitizeUrl } from '../../runtime/context-repo.js'
 import { ensureDirectory } from '../../utils.js'
-import {
-  buildScreenshotsMetadata,
-  getTopIssue,
-  renderGithubComment,
-  renderScreenshotsMarkdown,
-} from '../ci.js'
+import { buildScreenshotsMetadata, getTopIssue, renderScreenshotsMarkdown } from '../ci.js'
 import { renderCommandSection } from '../render.js'
 import type { CommandReport, PerfReviewReport, QaReport, ReportPublisherResult } from '../types.js'
 
@@ -125,11 +120,6 @@ export async function publishFileReport({
   await writeFile(path.join(outputDir, 'top-issue.txt'), `${topIssue}\n`, 'utf8')
   await writeFile(path.join(outputDir, 'status.txt'), `${finalReport.overallStatus}\n`, 'utf8')
   await writeFile(
-    path.join(outputDir, 'status-label.txt'),
-    `${finalReport.overallStatus}\n`,
-    'utf8'
-  )
-  await writeFile(
     path.join(outputDir, 'screenshots.md'),
     renderScreenshotsMarkdown(finalReport),
     'utf8'
@@ -137,11 +127,6 @@ export async function publishFileReport({
   await writeFile(
     path.join(outputDir, 'screenshots.json'),
     `${JSON.stringify(buildScreenshotsMetadata(finalReport), null, 2)}\n`,
-    'utf8'
-  )
-  await writeFile(
-    path.join(outputDir, 'comment-github.md'),
-    renderGithubComment(finalReport),
     'utf8'
   )
   await writeFile(

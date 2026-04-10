@@ -9,17 +9,12 @@ function stripAnthropicPrefix(modelId: string) {
 }
 
 export function createQaAgentModel(modelId = process.env.QA_MODEL ?? DEFAULT_QA_MODEL_ID) {
-  const gatewayKey = process.env.AI_GATEWAY_API_KEY || process.env.AI_GATEWAY_KEY
-  if (gatewayKey || process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_OIDC_TOKEN) {
-    if (!process.env.AI_GATEWAY_API_KEY && gatewayKey) {
-      process.env.AI_GATEWAY_API_KEY = gatewayKey
-    }
-
+  if (process.env.AI_GATEWAY_API_KEY) {
     return modelId
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.CLAUDE_API_KEY
-  const authToken = process.env.ANTHROPIC_AUTH_TOKEN ?? process.env.CLAUDE_AUTH_TOKEN
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  const authToken = process.env.ANTHROPIC_AUTH_TOKEN
   if (apiKey || authToken) {
     const anthropic = createAnthropic({
       ...(apiKey ? { apiKey } : {}),
@@ -32,7 +27,7 @@ export function createQaAgentModel(modelId = process.env.QA_MODEL ?? DEFAULT_QA_
   throw new Error(
     [
       'Missing AI credentials.',
-      'Set AI_GATEWAY_API_KEY (or AI_GATEWAY_KEY) for gateway access, or ANTHROPIC_API_KEY / CLAUDE_API_KEY for direct Anthropic access.',
+      'Set AI_GATEWAY_API_KEY for gateway access, or ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN for direct Anthropic access.',
       `Docs: ${DOCS_URLS.providerSetup}`,
     ].join('\n\n')
   )

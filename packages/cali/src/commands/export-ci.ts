@@ -20,7 +20,6 @@ export type ExportCiOptions = {
 type SinglePlatformCiOutput = {
   kind: 'single-platform'
   status: CommandReport['overallStatus']
-  statusLabel: string
   summary: string
   topIssue: string
   screenshots: ReturnType<typeof buildScreenshotsMetadata>
@@ -28,7 +27,6 @@ type SinglePlatformCiOutput = {
 
 type PlatformCiOutput = {
   status: CommandReport['overallStatus']
-  statusLabel: string
   summary: string
   topIssue: string
   screenshots: ReturnType<typeof buildScreenshotsMetadata>
@@ -37,7 +35,6 @@ type PlatformCiOutput = {
 type MultiPlatformCiOutput = {
   kind: 'multi-platform'
   status: CommandReport['overallStatus'] | 'mixed'
-  statusLabel: string
   summary: string
   topIssue: string
   platforms: {
@@ -127,7 +124,6 @@ function createSinglePlatformOutput(report: CommandReport): SinglePlatformCiOutp
   return {
     kind: 'single-platform',
     status: report.overallStatus,
-    statusLabel: report.overallStatus,
     summary: report.summary,
     topIssue: getDefaultTopIssue(report),
     screenshots: buildScreenshotsMetadata(report),
@@ -157,7 +153,6 @@ function createMultiPlatformOutput(reports: {
   return {
     kind: 'multi-platform',
     status,
-    statusLabel: status,
     summary: summary || 'No platform reports provided.',
     topIssue:
       platforms.android?.topIssue !== 'N/A'
@@ -172,7 +167,6 @@ function createMultiPlatformOutput(reports: {
 function createPlatformOutput(report: CommandReport): PlatformCiOutput {
   return {
     status: report.overallStatus,
-    statusLabel: report.overallStatus,
     summary: report.summary,
     topIssue: getDefaultTopIssue(report),
     screenshots: buildScreenshotsMetadata(report),

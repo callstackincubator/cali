@@ -44,17 +44,14 @@ function createCli() {
 export async function runCli(argv = process.argv) {
   const cli = createCli()
   const args = argv.slice(2)
-  const cwd = process.cwd()
   const printBanner = shouldPrintBanner(args)
   if (args.length === 0) {
-    const config = await loadCaliConfigFile(cwd)
+    const config = await loadCaliConfigFile(process.cwd())
     if (config.defaultCommand) {
       if (printBanner) {
         printRetroBanner()
       }
-      await Promise.resolve(
-        cli.parse([argv[0] ?? 'node', argv[1] ?? 'cali', config.defaultCommand])
-      )
+      cli.parse([argv[0] ?? 'node', argv[1] ?? 'cali', config.defaultCommand])
       return
     }
 
@@ -67,7 +64,7 @@ export async function runCli(argv = process.argv) {
     printRetroBanner()
   }
 
-  await Promise.resolve(cli.parse(argv))
+  cli.parse(argv)
 
   if (args.length === 0) {
     cli.outputHelp()

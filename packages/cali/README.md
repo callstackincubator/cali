@@ -141,23 +141,11 @@ export AI_GATEWAY_API_KEY="your-ai-gateway-key"
 export QA_MODEL="openai/gpt-5.4-mini"
 ```
 
-Gateway also accepts the compatibility alias:
-
-```bash
-export AI_GATEWAY_KEY="your-ai-gateway-key"
-```
-
 ### Anthropic Direct
 
 ```bash
 export ANTHROPIC_API_KEY="your-anthropic-api-key"
 export QA_MODEL="anthropic/claude-sonnet-4.6"
-```
-
-Anthropic also accepts the compatibility alias:
-
-```bash
-export CLAUDE_API_KEY="your-anthropic-api-key"
 ```
 
 ### `.env` example
@@ -415,12 +403,10 @@ The file publisher writes:
 - `report.json`
 - `section.md`
 - `status.txt`
-- `status-label.txt`
 - `summary.txt`
 - `top-issue.txt`
 - `screenshots.md`
 - `screenshots.json`
-- `comment-github.md`
 - `publisher-manifest.json`
 
 The default output directory is `artifacts/<command>`.
@@ -436,7 +422,6 @@ Single-platform `ci-output.json` combines:
 
 - `kind`
 - `status`
-- `statusLabel`
 - `summary`
 - `topIssue`
 - `screenshots`
@@ -445,7 +430,6 @@ Multi-platform `ci-output.json` combines:
 
 - `kind`
 - `status`
-- `statusLabel`
 - `summary`
 - `topIssue`
 - `platforms.android`
