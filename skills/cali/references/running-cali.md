@@ -31,6 +31,16 @@ Use `--ci github-actions|eas` only when you need to override provider detection.
 
 Do not auto-install missing CLIs. Cali should fail with actionable install guidance.
 
+## Required skills
+
+- Cali auto-installs missing required skills with `npx skills`
+- install target order:
+  - `~/.cali/skills`
+  - `./.cali/skills`
+- additional optional skills can still be discovered from:
+  - `./.agents/skills`
+  - `~/.agents/skills`
+
 ## Common commands
 
 ```bash

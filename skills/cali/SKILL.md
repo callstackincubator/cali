@@ -14,6 +14,7 @@ Use this skill as a router with mandatory defaults. Read this file first. For no
 - Prefer the shared `cali-context.json` contract over workflow-specific runtime scraping.
 - Keep setup and CI instructions copy-pasteable when editing docs.
 - If the task is about running Cali, verify the required local CLIs and model credentials before assuming the environment is ready.
+- Required role skills are Cali-managed; local CLIs are not.
 - If the task is about changing Cali, prefer small explicit runtime contracts over broad abstraction.
 
 ## Default flow

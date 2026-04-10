@@ -1,10 +1,12 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { access, cp, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 
 import { tool } from 'ai'
 import { z } from 'zod'
 
 import { DOCS_URLS } from '../docs.js'
+import { ensureCommandExists, ensureDirectory, runCommand, uniqueStrings } from '../utils.js'
 
 type SkillMetadata = {
   name: string
@@ -25,11 +27,29 @@ type RequiredSkillDocument = {
   preloadPaths: string[]
 }
 
-const SKILL_INSTALL_HINTS: Record<string, string> = {
-  'agent-device':
-    'npx skills add callstackincubator/agent-device --agent codex --skill agent-device -y',
-  'react-devtools':
-    'npx skills add callstackincubator/agent-skills --agent codex --skill react-devtools -y',
+type SkillInstallSpec = {
+  packageSource: string
+  skillName: string
+}
+
+const SKILL_INSTALL_SPECS: Record<string, SkillInstallSpec> = {
+  'agent-device': {
+    packageSource: 'callstackincubator/agent-device',
+    skillName: 'agent-device',
+  },
+  'react-devtools': {
+    packageSource: 'callstackincubator/agent-skills',
+    skillName: 'react-devtools',
+  },
+}
+
+function buildSkillInstallCommand(name: string) {
+  const spec = SKILL_INSTALL_SPECS[name]
+  if (!spec) {
+    return undefined
+  }
+
+  return `npx skills add ${spec.packageSource} --agent codex --skill ${spec.skillName} --copy -y`
 }
 
 function parseSkillFile(content: string) {
@@ -78,7 +98,7 @@ function resolveSkillFilePath(skill: SkillMetadata, relativeFilePath: string) {
 function findSkill(skills: SkillMetadata[], name: string) {
   const skill = skills.find((candidate) => candidate.name.toLowerCase() === name.toLowerCase())
   if (!skill) {
-    const installHint = SKILL_INSTALL_HINTS[name]
+    const installHint = buildSkillInstallCommand(name)
     throw new Error(
       [
         `Skill not found: ${name}`,
@@ -192,6 +212,111 @@ export async function preloadSkillDocuments(
   }
 
   return documents
+}
+
+export function getManagedSkillPaths(cwd: string) {
+  return uniqueStrings([
+    path.join(os.homedir(), '.cali', 'skills'),
+    path.join(cwd, '.cali', 'skills'),
+  ])
+}
+
+async function installRequiredSkill(targetDirectories: string[], skillName: string) {
+  const spec = SKILL_INSTALL_SPECS[skillName]
+  if (!spec) {
+    throw new Error(`No managed install spec found for required skill: ${skillName}`)
+  }
+
+  await ensureCommandExists('npx', 'Install Node.js and npm so `npx skills` is available.')
+
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'cali-skill-'))
+
+  try {
+    const installResult = await runCommand(
+      'npx',
+      [
+        'skills',
+        'add',
+        spec.packageSource,
+        '--agent',
+        'codex',
+        '--skill',
+        spec.skillName,
+        '--copy',
+        '-y',
+      ],
+      { cwd: temporaryRoot, allowFailure: true }
+    )
+
+    if (!installResult.ok) {
+      throw new Error(
+        [
+          `Failed to install required skill: ${skillName}`,
+          installResult.stderr || installResult.stdout,
+          `Try manually: ${buildSkillInstallCommand(skillName)}`,
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+      )
+    }
+
+    const sourceDirectory = path.join(temporaryRoot, '.agents', 'skills', spec.skillName)
+    await access(sourceDirectory)
+
+    let lastCopyError: unknown
+
+    for (const targetDirectory of targetDirectories) {
+      try {
+        await ensureDirectory(targetDirectory)
+        const targetSkillDirectory = path.join(targetDirectory, spec.skillName)
+        await rm(targetSkillDirectory, { recursive: true, force: true })
+        await cp(sourceDirectory, targetSkillDirectory, { recursive: true })
+        return targetSkillDirectory
+      } catch (error) {
+        lastCopyError = error
+      }
+    }
+
+    throw new Error(
+      [
+        `Installed required skill ${skillName}, but failed to place it in a managed Cali skills directory.`,
+        lastCopyError instanceof Error ? lastCopyError.message : String(lastCopyError),
+      ].join('\n\n')
+    )
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true })
+  }
+}
+
+export async function ensureRequiredSkillsInstalled(
+  cwd: string,
+  directories: string[],
+  requiredSkills: RequiredSkillDocument[],
+  discoveredSkills: SkillMetadata[]
+) {
+  const missingSkillNames = [
+    ...new Set(
+      requiredSkills
+        .map((requiredSkill) => requiredSkill.name)
+        .filter(
+          (name) =>
+            !discoveredSkills.some((skill) => skill.name.toLowerCase() === name.toLowerCase())
+        )
+    ),
+  ]
+
+  if (missingSkillNames.length === 0) {
+    return discoveredSkills
+  }
+
+  const managedSkillDirectories = getManagedSkillPaths(cwd)
+
+  for (const missingSkillName of missingSkillNames) {
+    console.log(`Installing required Cali skill: ${missingSkillName}`)
+    await installRequiredSkill(managedSkillDirectories, missingSkillName)
+  }
+
+  return discoverSkills(directories)
 }
 
 export function buildPreloadedSkillsPrompt(documents: PreloadedSkillDocument[]) {

@@ -7,6 +7,8 @@ import {
   buildSkillsPrompt,
   createSkillsToolPack,
   discoverSkills,
+  ensureRequiredSkillsInstalled,
+  getManagedSkillPaths,
   preloadSkillDocuments,
   type RequiredSkillDocument,
   type SkillMetadata,
@@ -94,7 +96,7 @@ export async function prepareToolPacks(options: PrepareToolPacksOptions) {
   if (enabledToolPacks.includes('agent-device') && !sessionName) {
     throw new Error('agent-device tool pack requires a bound session name.')
   }
-  const skills = await discoverSkills(skillPaths)
+  const discoveredSkillPaths = [...getManagedSkillPaths(process.cwd()), ...skillPaths]
   await Promise.all(
     enabledToolPacks.map(async (toolPackName) => {
       await TOOL_PACK_DEFINITIONS[toolPackName].ensureAvailable?.()
@@ -106,6 +108,12 @@ export async function prepareToolPacks(options: PrepareToolPacksOptions) {
   }
   const requiredSkills = enabledToolPacks.flatMap(
     (toolPackName) => TOOL_PACK_DEFINITIONS[toolPackName].requiredSkills ?? []
+  )
+  const skills = await ensureRequiredSkillsInstalled(
+    process.cwd(),
+    discoveredSkillPaths,
+    requiredSkills,
+    await discoverSkills(discoveredSkillPaths)
   )
   const preloadedSkillDocuments = await preloadSkillDocuments(skills, requiredSkills)
   const preloadedSkillNames = [

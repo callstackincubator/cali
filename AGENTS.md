@@ -108,6 +108,12 @@ Built-in pack ids:
 
 Required skill guidance should be preloaded through the tool-pack registry when a pack depends on a skill workflow. Do not push that responsibility into individual prompts by hand.
 
+Required role skills are Cali-managed:
+
+- Cali auto-installs missing required skills into `~/.cali/skills`
+- if that is unavailable, Cali falls back to `./.cali/skills`
+- local CLIs are still user-managed; do not blur skill bootstrap with CLI installation
+
 ## Command Guidance
 
 ### `qa`

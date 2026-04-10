@@ -199,6 +199,8 @@ If one of these is missing, Cali stops with an actionable error instead of tryin
 
 Cali discovers local skills from:
 
+- `~/.cali/skills`
+- `./.cali/skills`
 - `./.agents/skills`
 - `~/.agents/skills`
 
@@ -207,11 +209,13 @@ Required role skills:
 - `qa`: `agent-device`
 - `perf-review`: `agent-device`, `react-devtools`
 
-Install examples:
+Cali auto-installs missing required skills with `npx skills` into `~/.cali/skills`, falling back to `./.cali/skills` when needed. CLI binaries are still not auto-installed.
+
+Equivalent manual install commands:
 
 ```bash
-npx skills add callstackincubator/agent-device --agent codex --skill agent-device -y
-npx skills add callstackincubator/agent-skills --agent codex --skill react-devtools -y
+npx skills add callstackincubator/agent-device --agent codex --skill agent-device --copy -y
+npx skills add callstackincubator/agent-skills --agent codex --skill react-devtools --copy -y
 ```
 
 ## CI Providers
