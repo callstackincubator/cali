@@ -12,6 +12,15 @@ export type ExportCiOptions = {
   outputDir?: string
 }
 
+type EasExportSummary = {
+  status: CommandReport['overallStatus']
+  statusLabel: string
+  summary: string
+  topIssue: string
+  screenshotsCell: string
+  screenshots: ReturnType<typeof buildScreenshotsMetadata>
+}
+
 export async function exportCi(options: ExportCiOptions) {
   const cwd = process.cwd()
   const reportPath = resolveFromCwd(cwd, options.reportPath)
@@ -23,18 +32,20 @@ export async function exportCi(options: ExportCiOptions) {
 
   const topIssue =
     getTopIssue(report) ?? (report.overallStatus === 'passed' ? 'N/A' : report.summary)
+  const summary: EasExportSummary = {
+    status: report.overallStatus,
+    statusLabel: report.overallStatus,
+    summary: report.summary,
+    topIssue,
+    screenshotsCell: renderScreenshotsCell(report),
+    screenshots: buildScreenshotsMetadata(report),
+  }
 
   await writeFile(path.join(outputDir, 'eas-status.txt'), `${report.overallStatus}\n`, 'utf8')
-  await writeFile(path.join(outputDir, 'eas-top-issue.txt'), `${topIssue}\n`, 'utf8')
   await writeFile(path.join(outputDir, 'eas-section-body.md'), renderCommandSection(report), 'utf8')
   await writeFile(
-    path.join(outputDir, 'eas-screenshots-cell.md'),
-    `${renderScreenshotsCell(report)}\n`,
-    'utf8'
-  )
-  await writeFile(
-    path.join(outputDir, 'eas-screenshots.json'),
-    `${JSON.stringify(buildScreenshotsMetadata(report), null, 2)}\n`,
+    path.join(outputDir, 'eas-output.json'),
+    `${JSON.stringify(summary, null, 2)}\n`,
     'utf8'
   )
 

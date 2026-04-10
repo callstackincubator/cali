@@ -427,6 +427,21 @@ The default output directory is `artifacts/<command>`.
 
 For `qa`, Cali writes this output contract even for blocked runs during CI/bootstrap startup, as long as the output directory itself is writable.
 
+`export-ci --target eas` writes a smaller provider helper contract:
+
+- `eas-status.txt`
+- `eas-section-body.md`
+- `eas-output.json`
+
+`eas-output.json` combines:
+
+- `status`
+- `statusLabel`
+- `summary`
+- `topIssue`
+- `screenshotsCell`
+- `screenshots`
+
 For `qa` and `perf-review`, screenshots are saved under `artifacts/<command>/screenshots`.
 
 If `BLOB_READ_WRITE_TOKEN` is set, the blob publisher uploads screenshots and enriches the report with blob URLs.
