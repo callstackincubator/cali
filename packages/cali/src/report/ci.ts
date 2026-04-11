@@ -73,6 +73,18 @@ export function renderScreenshotsCell(report?: CommandReport) {
     .join('<br><br>')
 }
 
+function getPlatformLabel(report: CommandReport) {
+  if (report.context.mobile?.platform === 'ios') {
+    return 'iOS'
+  }
+
+  if (report.context.mobile?.platform === 'android') {
+    return 'Android'
+  }
+
+  return 'Screenshots'
+}
+
 function getScreenshots(report?: CommandReport) {
   return report && hasScreenshots(report) ? report.screenshots : []
 }
@@ -147,49 +159,56 @@ function getScreenshotGroupLabel(screenshot: ScreenshotInfo) {
   return normalizeScreenshotGroupLabel(screenshot.label) || screenshot.label.toLowerCase()
 }
 
-function createScreenshotRows(android?: CommandReport, ios?: CommandReport) {
-  const rows = new Map<
+function createScreenshotColumns(
+  reports: Array<{ platformLabel: string; report?: CommandReport }>
+) {
+  const columns = new Map<
     string,
     {
       label: string
-      android: ScreenshotInfo[]
-      ios: ScreenshotInfo[]
+      byPlatform: Map<string, ScreenshotInfo[]>
       order: number
     }
   >()
+  const platformLabels = reports.map((report) => report.platformLabel)
 
-  function add(platform: 'android' | 'ios', screenshots: ScreenshotInfo[]) {
+  for (const { platformLabel, report } of reports) {
+    const screenshots = getScreenshots(report)
     for (const screenshot of screenshots) {
       const key = getScreenshotGroupLabel(screenshot)
-      const row = rows.get(key) ?? {
+      const column = columns.get(key) ?? {
         label: screenshot.label,
-        android: [],
-        ios: [],
-        order: rows.size,
+        byPlatform: new Map<string, ScreenshotInfo[]>(),
+        order: columns.size,
       }
-      row[platform].push(screenshot)
-      rows.set(key, row)
+
+      const platformScreenshots = column.byPlatform.get(platformLabel) ?? []
+      platformScreenshots.push(screenshot)
+      column.byPlatform.set(platformLabel, platformScreenshots)
+      columns.set(key, column)
     }
   }
 
-  add('android', getScreenshots(android))
-  add('ios', getScreenshots(ios))
-
-  return [...rows.values()].sort((left, right) => left.order - right.order)
+  return {
+    platformLabels,
+    columns: [...columns.values()].sort((left, right) => left.order - right.order),
+  }
 }
 
-function renderScreenshotsTable(android?: CommandReport, ios?: CommandReport) {
-  const rows = createScreenshotRows(android, ios)
-  if (rows.length === 0) {
+function renderScreenshotsTable(reports: Array<{ platformLabel: string; report?: CommandReport }>) {
+  const { platformLabels, columns } = createScreenshotColumns(reports)
+  if (columns.length === 0) {
     return 'No screenshots recorded.'
   }
 
   return [
-    '| Focus | Android | iOS |',
-    '| --- | --- | --- |',
-    ...rows.map(
-      (row) =>
-        `| ${toInlineTableCell(row.label)} | ${renderScreenshotGroupCell(row.android)} | ${renderScreenshotGroupCell(row.ios)} |`
+    `| Platform | ${columns.map((column) => toInlineTableCell(column.label)).join(' | ')} |`,
+    `| --- | ${columns.map(() => '---').join(' | ')} |`,
+    ...platformLabels.map(
+      (platformLabel) =>
+        `| ${platformLabel} | ${columns
+          .map((column) => renderScreenshotGroupCell(column.byPlatform.get(platformLabel) ?? []))
+          .join(' | ')} |`
     ),
   ].join('\n')
 }
@@ -217,7 +236,12 @@ export function renderGithubComment(report: CommandReport) {
   }
 
   if (hasScreenshots(report) && report.screenshots.length > 0) {
-    lines.push('', '#### Screenshots', '', renderScreenshotsMarkdown(report).trimEnd())
+    lines.push(
+      '',
+      '#### Screenshots',
+      '',
+      renderScreenshotsTable([{ platformLabel: getPlatformLabel(report), report }])
+    )
   }
 
   if (report.publisherResults?.length) {
@@ -247,7 +271,15 @@ export function renderGithubMultiPlatformComment(reports: {
     `| iOS | ${formatStatusForTable(ios)} | ${formatTopIssueForTable(ios)} |`
   )
 
-  lines.push('', '#### Screenshots', '', renderScreenshotsTable(android, ios))
+  lines.push(
+    '',
+    '#### Screenshots',
+    '',
+    renderScreenshotsTable([
+      { platformLabel: 'Android', report: android },
+      { platformLabel: 'iOS', report: ios },
+    ])
+  )
 
   if (android) {
     lines.push(
