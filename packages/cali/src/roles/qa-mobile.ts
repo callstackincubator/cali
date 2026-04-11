@@ -43,14 +43,6 @@ const WRITE_REPORT_INPUT_SCHEMA = z.object({
   checked: z.array(z.string()).optional(),
   issues: z.array(z.string()).optional(),
   nextSteps: z.array(z.string()).optional(),
-  screenshotLabels: z
-    .array(
-      z.object({
-        fileName: z.string(),
-        label: z.string(),
-      })
-    )
-    .optional(),
   environmentNotes: z.array(z.string()).optional(),
 })
 
@@ -103,7 +95,8 @@ function buildPrompt(
 
   lines.push(
     '',
-    `Save screenshots into ${context.output.screenshotsDir ?? 'the screenshots directory'}/*.png with short descriptive filenames.`,
+    `Save screenshots into ${context.output.screenshotsDir ?? 'the screenshots directory'}/*.png with short descriptive filenames that describe the current visible state.`,
+    'Name screenshot files after observed state, not intended step labels. For example, use counter-0-before-increment.png only after verifying the counter is visibly 0.',
     'When text visibility matters, prefer a plain snapshot over image-heavy inspection.',
     'Do not use agent-device session management commands such as session list, session close, or session open.',
     'Use canonical agent-device commands like back or home directly. Do not emulate navigation with press.',
@@ -138,7 +131,7 @@ export async function runQaMobileRole(
     'Refresh your view with snapshot-style commands after every meaningful UI transition.',
     'Do not spend steps on session management commands such as session list, session close, or session open.',
     'Use canonical agent-device commands like back or home directly. Do not emulate them with press.',
-    'Take screenshots for meaningful states and keep filenames short and descriptive.',
+    'Take screenshots for meaningful states and keep filenames short, descriptive, and faithful to the visible state at capture time.',
     'If the environment is broken or a prerequisite is missing, report blocked checks instead of guessing.',
     'If the evidence is visual but not conclusive from text automation, prefer overallStatus "unsure".',
     'Do not finish with plain text. Finish only by calling write_report exactly once.',
@@ -159,8 +152,7 @@ export async function runQaMobileRole(
     ),
     tools,
     reportSchema: WRITE_REPORT_INPUT_SCHEMA,
-    reportDescription:
-      'Persist the final QA summary, findings, environment notes, and screenshot labels.',
+    reportDescription: 'Persist the final QA summary, findings, and environment notes.',
     reserveReportAfterTool: 'agent_device',
     createMissingReport: createMissingQaReport,
     onAgentStep,

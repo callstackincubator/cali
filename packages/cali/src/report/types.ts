@@ -2,11 +2,6 @@ import type { CaliContext, CommandId, ToolTraceEntry } from '../runtime/types.js
 
 export type ResultStatus = 'passed' | 'failed' | 'blocked' | 'not_tested' | 'unsure'
 
-export type ScreenshotLabel = {
-  fileName: string
-  label: string
-}
-
 export type ScreenshotInfo = {
   fileName: string
   absolutePath?: string
@@ -42,7 +37,6 @@ export type QaReportInput = {
   checked?: string[]
   issues?: string[]
   nextSteps?: string[]
-  screenshotLabels?: ScreenshotLabel[]
   environmentNotes?: string[]
 }
 
@@ -51,7 +45,6 @@ export type QaReport = BaseCommandReport & {
   checked: string[]
   issues: string[]
   nextSteps?: string[]
-  screenshotLabels: ScreenshotLabel[]
   screenshots: ScreenshotInfo[]
   acceptanceCriteriaUsed: string[]
   environmentNotes?: string[]

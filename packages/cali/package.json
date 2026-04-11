@@ -17,8 +17,6 @@
     "dev:qa": "node --import=tsx ./src/cli.ts qa",
     "dev:qa:local:android": "node --import=tsx ./src/cli.ts qa --local android",
     "dev:qa:local:ios": "node --import=tsx ./src/cli.ts qa --local ios",
-    "qa:ci:gha": "node ./dist/index.js qa --ci github-actions --quiet",
-    "qa:ci:eas": "node ./dist/index.js qa --ci eas --quiet",
     "dev:review": "node --import=tsx ./src/cli.ts review",
     "dev:perf-review": "node --import=tsx ./src/cli.ts perf-review",
     "dev:dev-command": "node --import=tsx ./src/cli.ts dev",
@@ -60,7 +58,7 @@
     "README.md"
   ],
   "license": "MIT",
-  "version": "0.4.0-4",
+  "version": "0.4.0-5",
   "engines": {
     "node": ">=22"
   }

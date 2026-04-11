@@ -73,6 +73,10 @@ export function renderScreenshotsCell(report?: CommandReport) {
     .join('<br><br>')
 }
 
+function getScreenshots(report?: CommandReport) {
+  return report && hasScreenshots(report) ? report.screenshots : []
+}
+
 function formatStatusForTable(report?: CommandReport) {
   return report?.overallStatus ?? 'N/A'
 }
@@ -131,6 +135,73 @@ function renderScreenshotCellItem(screenshot: ScreenshotInfo) {
   return `**${safeLabel}**<br><a href="${safeUrl}"><img src="${safeUrl}" alt="${safeLabel}" height="320" /></a>`
 }
 
+function normalizeScreenshotGroupLabel(label: string) {
+  return label
+    .toLowerCase()
+    .replace(/\b(android|ios)\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function getScreenshotGroupLabel(screenshot: ScreenshotInfo) {
+  return normalizeScreenshotGroupLabel(screenshot.label) || screenshot.label.toLowerCase()
+}
+
+function createScreenshotRows(android?: CommandReport, ios?: CommandReport) {
+  const rows = new Map<
+    string,
+    {
+      label: string
+      android: ScreenshotInfo[]
+      ios: ScreenshotInfo[]
+      order: number
+    }
+  >()
+
+  function add(platform: 'android' | 'ios', screenshots: ScreenshotInfo[]) {
+    for (const screenshot of screenshots) {
+      const key = getScreenshotGroupLabel(screenshot)
+      const row = rows.get(key) ?? {
+        label: screenshot.label,
+        android: [],
+        ios: [],
+        order: rows.size,
+      }
+      row[platform].push(screenshot)
+      rows.set(key, row)
+    }
+  }
+
+  add('android', getScreenshots(android))
+  add('ios', getScreenshots(ios))
+
+  return [...rows.values()].sort((left, right) => left.order - right.order)
+}
+
+function renderScreenshotsTable(android?: CommandReport, ios?: CommandReport) {
+  const rows = createScreenshotRows(android, ios)
+  if (rows.length === 0) {
+    return 'No screenshots recorded.'
+  }
+
+  return [
+    '| Focus | Android | iOS |',
+    '| --- | --- | --- |',
+    ...rows.map(
+      (row) =>
+        `| ${toInlineTableCell(row.label)} | ${renderScreenshotGroupCell(row.android)} | ${renderScreenshotGroupCell(row.ios)} |`
+    ),
+  ].join('\n')
+}
+
+function renderScreenshotGroupCell(screenshots: ScreenshotInfo[]) {
+  if (screenshots.length === 0) {
+    return 'N/A'
+  }
+
+  return screenshots.map((screenshot) => renderScreenshotCellItem(screenshot)).join('<br><br>')
+}
+
 export function renderGithubComment(report: CommandReport) {
   const lines = [
     `### ${getTitle(report)}`,
@@ -176,14 +247,7 @@ export function renderGithubMultiPlatformComment(reports: {
     `| iOS | ${formatStatusForTable(ios)} | ${formatTopIssueForTable(ios)} |`
   )
 
-  lines.push(
-    '',
-    '#### Screenshots',
-    '',
-    '| Android | iOS |',
-    '| --- | --- |',
-    `| ${renderScreenshotsCell(android)} | ${renderScreenshotsCell(ios)} |`
-  )
+  lines.push('', '#### Screenshots', '', renderScreenshotsTable(android, ios))
 
   if (android) {
     lines.push(

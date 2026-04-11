@@ -104,6 +104,7 @@ Local mobile behavior:
 - local Android reuses the single booted emulator/device when exactly one is available, otherwise pass `--device`
 - local runs try `open --relaunch` before reinstalling
 - local iOS reuses the single booted simulator when exactly one is available, otherwise pass `--device`
+- debug artifacts usually need Metro running for the duration of the QA run; start and stop Metro outside Cali
 
 ### CI-native commands
 
@@ -211,7 +212,7 @@ Required role skills:
 
 Cali auto-installs missing required skills with `npx skills` into `~/.cali/skills`, falling back to `./.cali/skills` when needed. CLI binaries are still not auto-installed.
 
-Equivalent manual install commands:
+If you want to install the same skills yourself into a standard skills directory, use:
 
 ```bash
 npx skills add callstackincubator/agent-device --agent codex --skill agent-device --copy -y
@@ -256,6 +257,8 @@ Core CI command:
 cali qa --quiet --platform ios --artifact ./artifacts/MyApp.app
 cali qa --quiet --platform android --artifact ./artifacts/app.apk
 ```
+
+If the artifact is a debug build, start Metro before `cali qa`, wait until it is ready, and stop it in CI cleanup. Release builds normally do not need Metro.
 
 Optional helper:
 

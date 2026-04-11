@@ -36,12 +36,6 @@ function composeQaReport(
   agentDeviceTrace: QaReport['agentDeviceTrace'],
   acceptanceCriteriaUsed: string[]
 ): QaReport {
-  const screenshotLabelMap = new Map(
-    (reportInput.screenshotLabels ?? [])
-      .filter((item) => item.fileName && item.label)
-      .map((item) => [item.fileName, item.label.trim()])
-  )
-
   return {
     command: 'qa',
     generatedAt: new Date().toISOString(),
@@ -52,11 +46,9 @@ function composeQaReport(
     checked: reportInput.checked ?? [],
     issues: reportInput.issues ?? [],
     nextSteps: reportInput.nextSteps ?? [],
-    screenshotLabels: reportInput.screenshotLabels ?? [],
     screenshots: screenshots.map((screenshot) => ({
       ...screenshot,
-      label:
-        screenshotLabelMap.get(screenshot.fileName) ?? humanizeScreenshotLabel(screenshot.fileName),
+      label: humanizeScreenshotLabel(screenshot.fileName),
     })),
     acceptanceCriteriaUsed,
     environmentNotes: reportInput.environmentNotes ?? [],
@@ -76,12 +68,6 @@ function createBlockedReport(summary: string): QaReportInput {
 }
 
 export async function runQaCommand(cli: CommandCliOptions) {
-  if (cli.envName === 'mobile-pr' || cli.envName === 'eas-mobile-pr') {
-    throw new Error(
-      '`cali qa` no longer supports `--env mobile-pr` or `--env eas-mobile-pr`. Use `--ci github-actions` or `--ci eas` for CI runs, or `--env local-android` / `--env local-ios` for local runs.'
-    )
-  }
-
   let acceptanceCriteriaUsed: string[] | undefined
 
   return runMobileStructuredCommand({

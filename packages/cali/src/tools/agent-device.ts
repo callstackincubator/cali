@@ -34,6 +34,20 @@ function normalizeScreenshotArgs(args: string[], screenshotsDir: string) {
     return [path.join(screenshotsDir, getDefaultScreenshotFileName())]
   }
 
+  const outFlagIndex = args.findIndex((arg) => arg === '--out')
+  if (outFlagIndex >= 0) {
+    const outputPath = args[outFlagIndex + 1]
+    if (!outputPath || outputPath.startsWith('-')) {
+      return args
+    }
+
+    const normalizedArgs = [...args]
+    normalizedArgs[outFlagIndex + 1] = path.isAbsolute(outputPath)
+      ? outputPath
+      : path.join(screenshotsDir, outputPath)
+    return normalizedArgs
+  }
+
   const [candidatePath, ...rest] = args
   if (!candidatePath || candidatePath.startsWith('-')) {
     return args

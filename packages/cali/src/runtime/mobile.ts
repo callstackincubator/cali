@@ -717,7 +717,7 @@ export async function listScreenshots(screenshotsDir: string) {
     return []
   }
 
-  const screenshots: Array<Omit<ScreenshotInfo, 'label'>> = []
+  const screenshots: Array<Omit<ScreenshotInfo, 'label'> & { mtimeMs: number }> = []
   for (const entry of entries) {
     if (!entry.endsWith('.png')) {
       continue
@@ -729,8 +729,16 @@ export async function listScreenshots(screenshotsDir: string) {
       fileName: entry,
       absolutePath,
       bytes: fileStat.size,
+      mtimeMs: fileStat.mtimeMs,
     })
   }
 
-  return screenshots.sort((left, right) => left.fileName.localeCompare(right.fileName))
+  return screenshots
+    .sort(
+      (left, right) => left.mtimeMs - right.mtimeMs || left.fileName.localeCompare(right.fileName)
+    )
+    .map(({ mtimeMs, ...screenshot }) => {
+      void mtimeMs
+      return screenshot
+    })
 }
