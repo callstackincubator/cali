@@ -136,15 +136,21 @@ function escapeHtml(value: string) {
     .replaceAll('"', '&quot;')
 }
 
-function renderScreenshotCellItem(screenshot: ScreenshotInfo) {
+function renderScreenshotCellItem(
+  screenshot: ScreenshotInfo,
+  options: { showLabel?: boolean } = {}
+) {
   const safeLabel = escapeHtml(screenshot.label)
   const safeUrl = sanitizeUrl(screenshot.blobUrl)
 
   if (!safeUrl) {
-    return `**${safeLabel}**<br>${escapeHtml(screenshot.fileName)}`
+    return options.showLabel
+      ? `**${safeLabel}**<br>${escapeHtml(screenshot.fileName)}`
+      : escapeHtml(screenshot.fileName)
   }
 
-  return `**${safeLabel}**<br><a href="${safeUrl}"><img src="${safeUrl}" alt="${safeLabel}" height="320" /></a>`
+  const image = `<a href="${safeUrl}"><img src="${safeUrl}" alt="${safeLabel}" height="320" /></a>`
+  return options.showLabel ? `**${safeLabel}**<br>${image}` : image
 }
 
 function normalizeScreenshotGroupLabel(label: string) {
@@ -218,7 +224,11 @@ function renderScreenshotGroupCell(screenshots: ScreenshotInfo[]) {
     return 'N/A'
   }
 
-  return screenshots.map((screenshot) => renderScreenshotCellItem(screenshot)).join('<br><br>')
+  return screenshots
+    .map((screenshot) =>
+      renderScreenshotCellItem(screenshot, { showLabel: screenshots.length > 1 })
+    )
+    .join('<br><br>')
 }
 
 export function renderGithubComment(report: CommandReport) {
