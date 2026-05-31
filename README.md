@@ -70,3 +70,70 @@ Feel free to open an issue or a discussion to suggest ideas or report bugs. Happ
 Cali is an open source project and will always remain free to use. If you think it's cool, please star it 🌟. [Callstack](https://callstack.com) is a group of React and React Native geeks, contact us at [hello@callstack.com](mailto:hello@callstack.com) if you need any help with these or just want to say hi!
 
 Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥 
+
+
+---
+
+## FAQ
+
+### What is Cali?
+
+Cali is an AI agent that helps you build React Native apps. It takes all the utilities and functions of a React Native CLI and exposes them as tools to an LLM, enabling AI-powered React Native development.
+
+### How can I use Cali?
+
+| Mode | Package | Description |
+|------|---------|-------------|
+| **Standalone** | `cali` | AI agent that runs in your terminal, ready to use out of the box |
+| **Vercel AI SDK** | `cali-tools` | Collection of tools for building React Native apps with Vercel AI SDK |
+| **MCP Clients** | `cali-mcp-server` | MCP server for using Cali with Claude, Zed, and other MCP-compatible environments |
+
+### What can Cali do?
+
+| Capability | Description |
+|------------|-------------|
+| **Build Automation** | Running and building React Native apps on iOS and Android |
+| **Device Management** | Listing and managing connected Android and iOS devices and simulators |
+| **Dependency Management** | Install and manage npm packages and CocoaPods dependencies |
+| **Library Search** | Searching React Native libraries from [React Native Directory](https://reactnative.directory) |
+
+### How do I install Cali?
+
+```bash
+npx cali
+```
+
+### What are the available tools?
+
+Learn more about available tools in the [tools README](./packages/tools/README.md).
+
+### What packages are available?
+
+| Package | README |
+|---------|--------|
+| **cali** | [packages/cali/README.md](./packages/cali/README.md) |
+| **cali-tools** | [packages/tools/README.md](./packages/tools/README.md) |
+| **cali-mcp-server** | [packages/mcp-server/README.md](./packages/mcp-server/README.md) |
+
+### Is Cali free?
+
+Yes, Cali is an open source project and will always remain free to use. If you think it's cool, please star it 🌟.
+
+### Who maintains Cali?
+
+Cali is made with ❤️ at [Callstack](https://callstack.com), a group of React and React Native geeks.
+
+### How can I contribute?
+
+Feel free to open an issue or a discussion to suggest ideas or report bugs. Happy to hear from you! 👋
+
+### Where can I get help?
+
+- **GitHub Issues**: [callstackincubator/cali/issues](https://github.com/callstackincubator/cali/issues)
+- **Callstack**: [hello@callstack.com](mailto:hello@callstack.com)
+- **Careers**: [callstack.com/careers](https://callstack.com/careers)
+
+### What license does Cali use?
+
+Cali is open source. Check the [LICENSE](LICENSE) file for details.
+
