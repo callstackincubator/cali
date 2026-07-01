@@ -7,18 +7,30 @@
   "scripts": {
     "build": "rslib build",
     "dev": "node --import=tsx ./src/cli.ts",
-    "start": "node ./dist/index.js"
+    "start": "node ./dist/index.js",
+    "qa": "node ./dist/index.js qa",
+    "qa:local:android": "node ./dist/index.js qa --local android",
+    "qa:local:ios": "node ./dist/index.js qa --local ios",
+    "review": "node ./dist/index.js review",
+    "perf-review": "node ./dist/index.js perf-review",
+    "dev:command": "node ./dist/index.js dev",
+    "dev:qa": "node --import=tsx ./src/cli.ts qa",
+    "dev:qa:local:android": "node --import=tsx ./src/cli.ts qa --local android",
+    "dev:qa:local:ios": "node --import=tsx ./src/cli.ts qa --local ios",
+    "dev:review": "node --import=tsx ./src/cli.ts review",
+    "dev:perf-review": "node --import=tsx ./src/cli.ts perf-review",
+    "dev:dev-command": "node --import=tsx ./src/cli.ts dev",
+    "export-ci": "node ./dist/index.js export-ci"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.0.2",
-    "@clack/prompts": "^0.8.1",
-    "ai": "^4.0.3",
-    "cali-tools": "0.3.1",
-    "chalk": "^5.3.0",
-    "dedent": "^1.5.3",
+    "@ai-sdk/anthropic": "^3.0.64",
+    "@vercel/blob": "^0.27.0",
+    "ai": "^6.0.138",
+    "cac": "^7.0.0",
+    "cosmiconfig": "^9.0.1",
     "dotenv": "^16.4.5",
     "gradient-string": "^3.0.0",
-    "zod": "^3.23.8"
+    "zod": "^4.3.6"
   },
   "bugs": {
     "url": "https://github.com/callstackincubator/cali/issues"
@@ -36,6 +48,8 @@
     "react-native",
     "ai",
     "agent",
+    "qa",
+    "mobile qa",
     "vercel ai"
   ],
   "files": [
@@ -44,7 +58,7 @@
     "README.md"
   ],
   "license": "MIT",
-  "version": "0.3.1",
+  "version": "0.4.0-6",
   "engines": {
     "node": ">=22"
   }

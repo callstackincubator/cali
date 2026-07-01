@@ -1,0 +1,15 @@
+import { retro } from 'gradient-string'
+
+const CALI_TEXT = `
+  ██████╗ █████╗ ██╗     ██╗
+ ██╔════╝██╔══██╗██║     ██║
+ ██║     ███████║██║     ██║
+ ██║     ██╔══██║██║     ██║
+ ╚██████╗██║  ██║███████╗██║
+  ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝
+`
+
+export function printRetroBanner() {
+  console.log(retro(CALI_TEXT))
+  console.log('Cali v2 for mobile agent workflows.\n')
+}

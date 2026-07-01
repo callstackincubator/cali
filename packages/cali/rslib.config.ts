@@ -3,8 +3,8 @@ import { defineConfig } from '@rslib/core'
 import { dependencies } from './package.json'
 
 /**
- * We need to bundle `ai` dependency with the CLI, because we have custom patch for it.
- * We delete `ai` from dependencies that are passed as `externals`.
+ * Bundle `ai` with the CLI so the shipped binary uses the exact agent implementation
+ * that Cali was built and validated against.
  */
 // @ts-ignore
 delete dependencies.ai

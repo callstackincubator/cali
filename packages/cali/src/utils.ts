@@ -1,60 +1,212 @@
-import { execSync } from 'node:child_process'
+import { execFile as execFileCallback } from 'node:child_process'
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
+import { promisify } from 'node:util'
 
-import { confirm, outro, text } from '@clack/prompts'
-import chalk from 'chalk'
-import dedent from 'dedent'
+import { DOCS_URLS } from './docs.js'
+import type { CaliPlatform } from './runtime/types.js'
 
-/**
- * Get API key from environment variables or prompt user for it.
- */
-export async function getApiKey(name: string, key: string) {
-  if (key in process.env) {
-    return process.env[key]
-  }
-  return (async () => {
-    let apiKey: string | symbol
-    do {
-      apiKey = await text({
-        message: dedent`
-          ${chalk.bold(`Please provide your ${name} API key.`)}
+const execFile = promisify(execFileCallback)
 
-          To skip this message, set ${chalk.bold(key)} env variable, and run again. 
-          
-          You can do it in three ways:
-          - by creating an ${chalk.bold('.env.local')} file (make sure to ${chalk.bold('.gitignore')} it)
-            ${chalk.gray(`\`\`\`
-              ${key}=<your-key>
-              \`\`\`
-            `)}
-          - by passing it inline:
-            ${chalk.gray(`\`\`\`
-              ${key}=<your-key> npx cali
-              \`\`\`
-            `)}
-          - by setting it as an env variable in your shell (e.g. in ~/.zshrc or ~/.bashrc):
-            ${chalk.gray(`\`\`\`
-              export ${key}=<your-key>
-              \`\`\`
-            `)},
-          `,
-        validate: (value) => (value.length > 0 ? undefined : `Please provide a valid ${key}.`),
-      })
-    } while (typeof apiKey === 'undefined')
+type CommandResult = {
+  ok: boolean
+  exitCode: number
+  stdout: string
+  stderr: string
+  stdoutBuffer?: Buffer
+}
 
-    if (typeof apiKey === 'symbol') {
-      outro(chalk.gray('Bye!'))
-      process.exit(0)
-    }
+type CommandOptions = {
+  cwd?: string
+  env?: NodeJS.ProcessEnv
+  allowFailure?: boolean
+  binaryStdout?: boolean
+}
 
-    const save = await confirm({
-      message: `Do you want to save it for future runs in .env.local?`,
+type ExecFileError = Error & {
+  stdout?: string | Buffer
+  stderr?: string | Buffer
+  status?: number | null
+  code?: number | string
+}
+
+const commandExistsCache = new Map<string, boolean>()
+
+export async function runCommand(
+  file: string,
+  args: string[],
+  options: CommandOptions = {}
+): Promise<CommandResult> {
+  const {
+    cwd = process.cwd(),
+    env = process.env,
+    allowFailure = false,
+    binaryStdout = false,
+  } = options
+
+  try {
+    const result = await execFile(file, args, {
+      cwd,
+      env,
+      maxBuffer: 20 * 1024 * 1024,
+      encoding: binaryStdout ? null : 'utf8',
     })
+    const stdoutBuffer = Buffer.isBuffer(result.stdout)
+      ? result.stdout
+      : Buffer.from(result.stdout ?? '', 'utf8')
+    const stdout = Buffer.isBuffer(result.stdout)
+      ? stdoutBuffer.toString('utf8')
+      : (result.stdout ?? '')
+    const stderr = Buffer.isBuffer(result.stderr)
+      ? result.stderr.toString('utf8')
+      : (result.stderr ?? '')
 
-    if (save) {
-      execSync(`echo "${key}=${apiKey}" >> .env.local`)
-      execSync(`echo ".env.local" >> .gitignore`)
+    return {
+      ok: true,
+      exitCode: 0,
+      stdout,
+      stderr,
+      stdoutBuffer,
+    }
+  } catch (unknownError) {
+    const error = unknownError as ExecFileError
+    const stdoutBuffer = Buffer.isBuffer(error.stdout) ? error.stdout : undefined
+    const stdout =
+      typeof error.stdout === 'string'
+        ? error.stdout
+        : stdoutBuffer
+          ? stdoutBuffer.toString('utf8')
+          : ''
+    const stderr =
+      typeof error.stderr === 'string'
+        ? error.stderr
+        : Buffer.isBuffer(error.stderr)
+          ? error.stderr.toString('utf8')
+          : error.message
+    const exitCode =
+      typeof error.status === 'number'
+        ? error.status
+        : typeof error.code === 'number'
+          ? error.code
+          : 1
+
+    if (!allowFailure) {
+      throw new Error(
+        [`Command failed: ${file} ${args.join(' ')}`, stderr || stdout].filter(Boolean).join('\n\n')
+      )
     }
 
-    return apiKey
-  })()
+    return {
+      ok: false,
+      exitCode,
+      stdout,
+      stderr,
+      stdoutBuffer,
+    }
+  }
+}
+
+export async function ensureCommandExists(commandName: string, installHint: string) {
+  const cached = commandExistsCache.get(commandName)
+  if (cached === true) {
+    return
+  }
+
+  const result = await runCommand('which', [commandName], { allowFailure: true })
+  if (result.ok && result.stdout.trim()) {
+    commandExistsCache.set(commandName, true)
+    return
+  }
+
+  throw new Error(
+    [
+      `Missing required CLI: ${commandName}`,
+      'Install it before running Cali:',
+      installHint,
+      `Docs: ${DOCS_URLS.requiredClis}`,
+    ].join('\n\n')
+  )
+}
+
+export async function ensureDirectory(directoryPath: string) {
+  await mkdir(directoryPath, { recursive: true })
+}
+
+export function parseJson<T>(value: string | undefined, fallback: T): T {
+  if (!value) {
+    return fallback
+  }
+
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+export function trimText(value: string, max = 6000) {
+  if (value.length <= max) {
+    return value
+  }
+
+  return `${value.slice(0, max)}\n...<truncated>`
+}
+
+export function uniqueStrings(values: Array<string | undefined>) {
+  return [
+    ...new Set(
+      values.filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim())
+    ),
+  ]
+}
+
+export function asArray(value: string | string[] | undefined) {
+  if (!value) {
+    return []
+  }
+
+  return Array.isArray(value) ? value : [value]
+}
+
+export function resolveFromCwd(cwd: string, targetPath: string) {
+  return path.isAbsolute(targetPath) ? targetPath : path.resolve(cwd, targetPath)
+}
+
+export function normalizePlatform(value: string | undefined): CaliPlatform | undefined {
+  if (value === 'android' || value === 'ios') {
+    return value
+  }
+
+  return undefined
+}
+
+export function inferPlatformFromArtifactPath(artifactPath: string | undefined) {
+  if (!artifactPath) {
+    return undefined
+  }
+
+  const normalized = artifactPath.toLowerCase()
+  if (normalized.endsWith('.apk') || normalized.endsWith('.aab')) {
+    return 'android' satisfies CaliPlatform
+  }
+
+  if (
+    normalized.endsWith('.app') ||
+    normalized.endsWith('.app.tar.gz') ||
+    normalized.endsWith('.ipa')
+  ) {
+    return 'ios' satisfies CaliPlatform
+  }
+
+  return undefined
+}
+
+export function humanizeScreenshotLabel(fileName: string) {
+  const stem = fileName.replace(/\.[^.]+$/, '')
+  const words = stem
+    .split(/[-_]+/g)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+
+  return words.join(' ') || fileName
 }

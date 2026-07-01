@@ -7,11 +7,8 @@ import { execSync } from 'node:child_process'
  * Export private internals. We add `.js` extension manually, since Bundler will not do it for us.
  */
 export {
-  install,
-  installDev,
-  uninstall,
-} from '@react-native-community/cli/build/tools/packageManager.js'
-export { build } from '@react-native-community/cli-platform-android/build/commands/buildAndroid/index.js'
+  build,
+} from '@react-native-community/cli-platform-android/build/commands/buildAndroid/index.js'
 export { getTaskNames } from '@react-native-community/cli-platform-android/build/commands/runAndroid/getTaskNames.js'
 export { getEmulators } from '@react-native-community/cli-platform-android/build/commands/runAndroid/tryLaunchEmulator.js'
 export { getPlatformInfo } from '@react-native-community/cli-platform-apple/build/commands/runCommand/getPlatformInfo.js'

@@ -1,6 +1,6 @@
 {
   "name": "@cali/root",
-  "version": "0.3.1",
+  "version": "0.4.0-6",
   "devDependencies": {
     "@release-it-plugins/workspaces": "^4.2.0",
     "@release-it/conventional-changelog": "^9.0.3",
@@ -20,14 +20,10 @@
     "vitest": "^2.1.1"
   },
   "license": "MIT",
-  "patchedDependencies": {
-    "ai@4.0.3": "patches/ai@4.0.3.patch"
-  },
   "private": true,
   "scripts": {
-    "build": "bun run build:tools && bun run build:mcp-server && bun run build:cli",
+    "build": "bun run build:tools && bun run build:cli",
     "build:tools": "cd packages/tools && bun run build",
-    "build:mcp-server": "cd packages/mcp-server && bun run build",
     "build:cli": "cd packages/cali && bun run build",
     "release": "release-it"
   },

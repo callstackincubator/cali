@@ -1,6 +1,6 @@
 # @callstack/cali
 
-Collection of tools for building AI agents that work with React Native. Exported tools can be used with [ai](https://www.npmjs.com/package/ai) package.
+React Native development tools for AI agents. Exported tools can be used with [ai](https://www.npmjs.com/package/ai).
 
 ## Usage
 
@@ -42,17 +42,6 @@ await generateText({
 - **startMetroDevServer** - Starts Metro development server on a given port or a different available port
 - **getReactNativeConfig** - Get React Native configuration including root directory, path, version, platforms, and project configuration
 - **listReactNativeLibraries** - List React Native libraries from reactnative.directory
-
-### NPM
-- **installNpmPackage** - Install a package from npm by name
-- **unInstallNpmPackage** - Uninstall a package from npm by name
-
-### File System
-- **getFileTree** - Get user file tree, can be used to determine the package.json location, package manager, etc.
-- **readFile** - Read file, can be used to read package.json, etc.
-
-### Git
-- **applyDiff** - Apply a diff/patch to a file
 
 ## Learn more
 
