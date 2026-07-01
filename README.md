@@ -1,75 +1,454 @@
-<div align="center">
-  <h1>cali</h1>
-</div>
+# cali
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/3554c7d3-0ea8-40a2-bd9c-176cfec231af" width="500" />
-</p>
+Cali v2 is a role-oriented CLI for React Native and Expo teams that want repeatable mobile QA, review, performance review, and implementation runs. It keeps deterministic setup in the CLI, gives the agent only the tools it needs, and writes a structured report that works locally or in CI.
 
-<p align="center">
-  🪄 AI agents for React Native and Expo workflows
-</p>
+- commands: `qa`, `review`, `perf-review`, `dev`
+- local mobile mode: `--local android|ios`
+- CI mode: implicit detection with optional `--ci github-actions|eas` override
+- one shared `cali-context.json` runtime contract
+- explicit tool packs per command
+- publisher-based outputs
+- additive `--prompt`
 
----
+## Core Concepts
 
-```bash
-$ npx cali
+- command: the user-facing role entrypoint such as `cali qa` or `cali review`
+- local: local mobile mode selector for `qa` and `perf-review`
+- context file: the optional explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
+- environment/context adapter: provider-specific metadata loading for GitHub Actions, EAS, local flags, and explicit JSON context
+- tool pack: a bounded set of tools exposed to the role, such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
+- publisher: an output target that enriches or writes the report, such as local files or blob-hosted screenshots
+
+## Commands
+
+- `cali qa`
+  - mobile QA pass with `agent-device`
+- `cali review`
+  - findings-first PR/repository review (experimental)
+- `cali perf-review`
+  - runtime performance review with `agent-device` and `react-devtools` (experimental)
+- `cali dev`
+  - repository-backed implementation flow (experimental)
+
+## Shared Context
+
+All commands use one shared `cali-context.json` contract. Commands only require the sections they actually use.
+
+```json
+{
+  "workspaceRoot": ".",
+  "repository": {
+    "provider": "github.com",
+    "owner": "acme",
+    "name": "mobile-app",
+    "webUrl": "https://github.com/acme/mobile-app",
+    "defaultBranch": "main",
+    "currentBranch": "feature/onboarding-copy"
+  },
+  "pullRequest": {
+    "number": 42,
+    "title": "Fix onboarding CTA",
+    "body": "Acceptance criteria: the new CTA copy is visible on Screen B.",
+    "url": "https://github.com/acme/mobile-app/pull/42",
+    "labels": ["mobile", "qa"],
+    "isDraft": false,
+    "baseBranch": "main",
+    "headBranch": "feature/onboarding-copy"
+  },
+  "mobile": {
+    "platform": "android",
+    "artifactPath": "./artifacts/app.apk",
+    "appId": "com.example.myapp",
+    "deviceName": "Pixel 9"
+  },
+  "build": {
+    "id": "gha-run-123",
+    "workflowUrl": "https://github.com/acme/mobile-app/actions/runs/123",
+    "logsUrl": "https://github.com/acme/mobile-app/actions/runs/123/job/456"
+  },
+  "output": {
+    "outputDir": "./artifacts/qa"
+  },
+  "qa": {
+    "acceptanceCriteria": ["Screen B shows the updated CTA copy", "The CTA remains tappable"]
+  },
+  "perfReview": {
+    "targetFlow": "Checkout",
+    "profilingGoals": ["rerenders", "slow interactions"]
+  },
+  "dev": {
+    "allowedValidations": ["bun test", "bunx tsc --noEmit"],
+    "writePolicy": "workspace",
+    "pushPolicy": "disabled"
+  }
+}
 ```
 
-## Wait, what?
+Flags always win over the context file. For example, `--platform`, `--artifact`, `--app-id`, `--output-dir`, `--pr-number`, or `--task-id` override the JSON values. For mobile runs, Cali can infer `--platform` from common artifact extensions (`.apk`, `.aab`, `.app`, `.app.tar.gz`, `.ipa`). For local mobile runs, `--app-id` is optional when Cali can infer it from the artifact.
 
-Cali is a set of AI-agent surfaces for React Native and Expo workflows. It exposes mobile development and QA utilities to LLMs so they can help with deterministic setup, app inspection, debugging, and other agent-friendly tasks.
-
-Thanks to that, an LLM can help you with your React Native app development, without the need to remember commands, spending time troubleshooting errors, and in the future, much more.
-
-## How can I use it?
-
-You can use Cali in three ways:
-
-- **standalone** - [`cali`](./packages/cali/README.md) - Role-oriented CLI for mobile QA, review, perf review, and dev runs in local and CI environments.
-- Copy-paste setup, provider envs, and CI examples for the standalone CLI live in [`packages/cali/README.md`](./packages/cali/README.md).
-- **with Vercel AI SDK** - [`cali-tools`](./packages/tools/README.md) - Collection of tools for building React Native apps with [Vercel AI SDK](https://github.com/ai-sdk/ai)
-
-For a repo-oriented guide to the current Cali v2 architecture, role platform, and extension points, see [`AGENTS.md`](./AGENTS.md).
-For the standalone CLI’s current env model, context file contract, and package scripts, see [`packages/cali/README.md`](./packages/cali/README.md).
-
-## What can it do?
-
-Cali is still in the early stages of development, but it already supports:
-
-- **Role-based Mobile Workflows**: QA today, with experimental review, perf review, and repo-backed dev runs through the standalone CLI
-- **Build Automation**: Running and building React Native apps on iOS and Android
-- **Device Management**: Listing and managing connected Android and iOS devices and simulators
-- **React Native Library Search**: Searching and listing React Native libraries from [React Native Directory](https://reactnative.directory)
-
-You can learn more about available tools [here](./packages/tools/README.md).
+For safety, Cali sanitizes credential-bearing repository URLs when loading context and publishes a reduced safe context in `report.json` by default.
 
 ## Examples
 
-#### Building an app step-by-step
+### Local QA
 
-<video src="https://github.com/user-attachments/assets/1d9c3f5b-d5cd-4901-8cad-bd10f1a45b07" width="500"></video>
+```bash
+cali qa \
+  --local ios \
+  --artifact ./artifacts/MyApp.app \
+  --prompt "verify the onboarding copy on Screen B"
+```
 
-#### Building an app with a highly-specific task
+Local mobile behavior:
 
-<video src="https://github.com/user-attachments/assets/74638f88-3515-4531-831c-7a98c2d4acd2" width="500"></video>
+- each run gets a unique `agent-device` session name such as `ios-a1b2c`
+- local Android reuses the single booted emulator/device when exactly one is available, otherwise pass `--device`
+- local runs try `open --relaunch` before reinstalling
+- local iOS reuses the single booted simulator when exactly one is available, otherwise pass `--device`
+- debug artifacts usually need Metro running for the duration of the QA run; start and stop Metro outside Cali
 
-#### Searching and installing a new React Native library
+### CI-native commands
 
-[TBD]
+```bash
+cali qa --platform ios --artifact ./artifacts/MyApp.app
+cali qa --platform android --artifact ./artifacts/app.apk
+cali review --context ./cali-context.json
+```
 
-#### Troubleshooting an error
+In GitHub Actions and EAS, Cali detects the provider automatically from the environment. Use `--ci` only to override detection. Use `--local android|ios` for local mobile runs.
 
-[TBD]
+Use `--quiet` to suppress the retro banner in scripted environments. Cali also suppresses the banner automatically when `CI=true`.
 
-## Future requests
+### Runtime performance review
 
-I like the idea of an AI agent for building React Native apps. I would like to play around with this idea in public, and see where it goes.
+```bash
+cali perf-review \
+  --context ./cali-context.json \
+  --platform android \
+  --artifact ./artifacts/app.apk \
+  --prompt "profile the checkout flow"
+```
 
-Feel free to open an issue or a discussion to suggest ideas or report bugs. Happy to hear from you! 👋
+### Repo-backed implementation
 
-## Made with ❤️ at Callstack
+```bash
+cali dev --context ./cali-context.json --prompt "implement issue 123"
+```
 
-Cali is an open source project and will always remain free to use. If you think it's cool, please star it 🌟. [Callstack](https://callstack.com) is a group of React and React Native geeks, contact us at [hello@callstack.com](mailto:hello@callstack.com) if you need any help with these or just want to say hi!
+## Provider Setup
 
-Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥
+Cali supports two model auth paths:
+
+### AI Gateway
+
+```bash
+export AI_GATEWAY_API_KEY="your-ai-gateway-key"
+export QA_MODEL="openai/gpt-5.4-mini"
+```
+
+### Anthropic Direct
+
+```bash
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+export QA_MODEL="anthropic/claude-sonnet-4.6"
+```
+
+### `.env` example
+
+```dotenv
+AI_GATEWAY_API_KEY=your-ai-gateway-key
+QA_MODEL=openai/gpt-5.4-mini
+```
+
+or:
+
+```dotenv
+ANTHROPIC_API_KEY=your-anthropic-api-key
+QA_MODEL=anthropic/claude-sonnet-4.6
+```
+
+The CLI loads `.env` automatically from the current workspace before it starts a run.
+
+Cali defaults to `openai/gpt-5.4-mini`. If gateway credentials are present, that model is routed through AI Gateway. Direct provider support in this package is Anthropic only.
+
+Optional publisher/runtime credentials:
+
+- `BLOB_READ_WRITE_TOKEN` for blob screenshot uploads
+
+## Required CLIs
+
+Some commands shell out to local binaries:
+
+- `qa`: requires `agent-device`
+- `perf-review`: requires `agent-device` and `agent-react-devtools`
+- `review`: requires `git` and `rg`
+- `dev`: requires `git`, `rg`, and `zsh`
+
+Install examples:
+
+```bash
+npm i -g agent-device
+npm i -g agent-react-devtools
+```
+
+On macOS/Linux, Git and `zsh` are usually present already. Install ripgrep if `rg` is missing.
+
+If you want Android app id inference from an `.apk` without passing `--app-id`, Cali now reads `AndroidManifest.xml` directly from the archive. It can also fall back to SDK `aapt` when the manifest is not readable.
+
+If one of these is missing, Cali stops with an actionable error instead of trying to install it automatically.
+
+## Required Skills
+
+Cali discovers local skills from:
+
+- `~/.cali/skills`
+- `./.cali/skills`
+- `./.agents/skills`
+- `~/.agents/skills`
+
+Required role skills:
+
+- `qa`: `agent-device`
+- `perf-review`: `agent-device`, `react-devtools`
+
+Cali auto-installs missing required skills with `npx skills` into `~/.cali/skills`, falling back to `./.cali/skills` when needed. CLI binaries are still not auto-installed.
+
+If you want to install the same skills yourself into a standard skills directory, use:
+
+```bash
+npx skills add callstackincubator/agent-device --agent codex --skill agent-device --copy -y
+npx skills add callstackincubator/agent-skills --agent codex --skill react-devtools --copy -y
+```
+
+## CI Providers
+
+The CI-native entrypoint is `cali <command>`, with provider detection handled automatically in GitHub Actions and EAS. Use `--ci <provider>` only to override detection.
+
+Supported providers:
+
+- `github-actions`
+- `eas`
+
+For CI runs, Cali derives runtime context from provider env plus CLI overrides directly inside the command.
+
+Required provider inputs:
+
+- GitHub Actions:
+  - `GITHUB_EVENT_PATH`
+  - `CALI_PLATFORM` or `--platform` when the artifact extension does not identify the platform
+  - `CALI_ARTIFACT_PATH` or `--artifact`
+  - optional `CALI_APP_ID`
+  - optional `CALI_DEVICE_NAME`
+  - optional `CALI_OUTPUT_DIR`
+  - optional `CALI_LOGS_URL`
+- EAS:
+  - `QA_PLATFORM` or `--platform` when the artifact extension does not identify the platform
+  - `APP_PATH` or `--artifact`
+  - optional `APPLICATION_ID` (EAS can often provide this from app config; otherwise Cali tries artifact inference)
+  - optional `CALI_DEVICE_NAME`
+  - optional `BUILD_ID`
+  - optional `WORKFLOW_URL`
+  - optional `LOGS_URL`
+  - optional `PR_JSON`
+
+## CI Helpers
+
+Core CI command:
+
+```bash
+cali qa --quiet --platform ios --artifact ./artifacts/MyApp.app
+cali qa --quiet --platform android --artifact ./artifacts/app.apk
+```
+
+If the artifact is a debug build, start Metro before `cali qa`, wait until it is ready, and stop it in CI cleanup. Release builds normally do not need Metro.
+
+Optional helper:
+
+```bash
+cali export-ci --report ./artifacts/qa/report.json
+cali export-ci --android ./artifacts/android/report.json --ios ./artifacts/ios/report.json
+```
+
+### GitHub Actions
+
+Minimal GitHub Actions example:
+
+```yaml
+- name: Install required CLIs
+  run: npm i -g agent-device
+
+- name: Run Cali QA
+  env:
+    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+    CALI_PLATFORM: android
+    CALI_ARTIFACT_PATH: ${{ steps.download_build.outputs.artifact_path }}
+    CALI_APP_ID: com.example.myapp
+  run: node ./packages/cali/dist/index.js qa --quiet
+
+- name: Export CI comment
+  run: node ./packages/cali/dist/index.js export-ci --report ./artifacts/qa/report.json
+
+- name: Publish PR comment
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ./artifacts/qa/ci-comment.md
+```
+
+`gh` is preinstalled on GitHub-hosted runners. For self-hosted runners or container jobs, install it explicitly and provide `GH_TOKEN`.
+
+Reference wrapper:
+
+- [`packages/cali/examples/github-actions/run-qa.sh`](./examples/github-actions/run-qa.sh)
+
+### EAS Workflows
+
+Minimal EAS example:
+
+```yaml
+- id: install_agent_device
+  run: npm i -g agent-device
+
+- id: run_cali_qa
+  env:
+    AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+    QA_PLATFORM: android
+    APP_PATH: ${{ steps.download_build.outputs.artifact_path }}
+    APPLICATION_ID: dev.expo.myapp
+    BUILD_ID: ${{ env.BUILD_ID }}
+    WORKFLOW_URL: ${{ workflow.url }}
+    PR_JSON: ${{ toJSON(github.event.pull_request) }}
+  run: node ./packages/cali/dist/index.js qa --quiet
+
+- id: export_cali_ci
+  run: node ./packages/cali/dist/index.js export-ci --report ./artifacts/qa/report.json
+```
+
+Reference wrapper:
+
+- [`packages/cali/examples/eas-workflows/run-qa.sh`](./examples/eas-workflows/run-qa.sh)
+
+For multi-platform PR comments, export once from both platform reports:
+
+```bash
+cali export-ci \
+  --android ./artifacts/android/report.json \
+  --ios ./artifacts/ios/report.json \
+  --output-dir ./artifacts/combined-comment
+```
+
+If you want Cali to stay GitHub-agnostic, keep posting outside Cali and use the rendered output directly:
+
+```bash
+export GH_TOKEN="${GITHUB_TOKEN}"
+gh pr comment "$PR_NUMBER" --body-file ./artifacts/combined-comment/ci-comment.md
+```
+
+## Config
+
+Create `cali.config.ts` in the project root:
+
+```ts
+export default {
+  defaultCommand: 'qa',
+  workspaceRoot: '.',
+  skillPaths: ['.agents/skills'],
+  commands: {
+    qa: {
+      contextPath: './cali-context.json',
+      mobileDefaults: {
+        platform: 'android',
+      },
+      extraInstructions: ['Prioritize auth and onboarding flows.'],
+    },
+    review: {
+      outputPublishers: ['file'],
+    },
+    perfReview: {
+      extraInstructions: ['Focus on rerender hotspots first.'],
+    },
+  },
+}
+```
+
+If `defaultCommand` is set, running plain `cali` with no command will execute that default command instead of showing help.
+
+## Tool Packs
+
+Built-in tool pack ids:
+
+- `skills`
+- `agent-device`
+- `repo-read`
+- `repo-write`
+- `react-devtools`
+
+Command defaults:
+
+- `qa`: `skills`, `agent-device`
+- `review`: `repo-read`, `skills` (experimental)
+- `perf-review`: `skills`, `agent-device`, `react-devtools`, `repo-read` (experimental)
+- `dev`: `repo-read`, `repo-write`, `skills` (experimental)
+
+## Development
+
+From the repository root:
+
+```bash
+bun install
+bun run build:cli
+bunx tsc --noEmit -p packages/cali/tsconfig.json
+```
+
+Useful package-local commands:
+
+- `cd packages/cali && bun run dev:qa -- --help`
+- `cd packages/cali && bun run dev:review -- --help`
+- `cd packages/cali && bun run dev:perf-review -- --help`
+- `cd packages/cali && bun run dev:dev-command -- --help`
+
+## Outputs
+
+The file publisher writes:
+
+- `report.json`
+- `section.md`
+- `status.txt`
+- `summary.txt`
+- `top-issue.txt`
+- `screenshots.md`
+- `screenshots.json`
+- `publisher-manifest.json`
+
+The default output directory is `artifacts/<command>`.
+
+For `qa`, Cali writes this output contract even for blocked runs during CI/bootstrap startup, as long as the output directory itself is writable.
+
+`export-ci` writes a smaller shared CI contract:
+
+- `ci-comment.md`
+- `ci-output.json`
+
+Single-platform `ci-output.json` combines:
+
+- `kind`
+- `status`
+- `summary`
+- `topIssue`
+- `screenshots`
+
+Multi-platform `ci-output.json` combines:
+
+- `kind`
+- `status`
+- `summary`
+- `topIssue`
+- `platforms.android`
+- `platforms.ios`
+
+For `qa` and `perf-review`, screenshots are saved under `artifacts/<command>/screenshots`.
+
+If `BLOB_READ_WRITE_TOKEN` is set, the blob publisher uploads screenshots and enriches the report with blob URLs.
+
+## Repo Guide
+
+For implementation details, runtime contracts, and guidance for extending Cali with new commands, see [`AGENTS.md`](./AGENTS.md).
