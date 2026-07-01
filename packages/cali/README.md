@@ -1,6 +1,6 @@
 # cali
 
-Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It runs first-class agent commands on top of a shared runtime model:
+Cali v2 is a role-oriented CLI for React Native and Expo teams that want repeatable mobile QA, review, performance review, and implementation runs. It keeps deterministic setup in the CLI, gives the agent only the tools it needs, and writes a structured report that works locally or in CI.
 
 - commands: `qa`, `review`, `perf-review`, `dev`
 - local mobile mode: `--local android|ios`
@@ -15,8 +15,9 @@ Cali v2 is a role-oriented CLI for mobile React Native and Expo workflows. It ru
 - command: the user-facing role entrypoint such as `cali qa` or `cali review`
 - local: local mobile mode selector for `qa` and `perf-review`
 - context file: the optional explicit JSON input for workspace, repository, PR/task, mobile, build, output, and role-specific sections
-- tool pack: a bounded capability surface such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
-- publisher: how reports are exposed after a run, such as `file` or `blob`
+- environment/context adapter: provider-specific metadata loading for GitHub Actions, EAS, local flags, and explicit JSON context
+- tool pack: a bounded set of tools exposed to the role, such as `agent-device`, `react-devtools`, `repo-read`, or `repo-write`
+- publisher: an output target that enriches or writes the report, such as local files or blob-hosted screenshots
 
 ## Commands
 
@@ -83,7 +84,7 @@ All commands use one shared `cali-context.json` contract. Commands only require 
 }
 ```
 
-Flags always win over the context file. For example, `--platform`, `--artifact`, `--app-id`, `--output-dir`, `--pr-number`, or `--task-id` override the JSON values. For local mobile runs, `--app-id` is optional when Cali can infer it from the artifact.
+Flags always win over the context file. For example, `--platform`, `--artifact`, `--app-id`, `--output-dir`, `--pr-number`, or `--task-id` override the JSON values. For mobile runs, Cali can infer `--platform` from common artifact extensions (`.apk`, `.aab`, `.app`, `.app.tar.gz`, `.ipa`). For local mobile runs, `--app-id` is optional when Cali can infer it from the artifact.
 
 For safety, Cali sanitizes credential-bearing repository URLs when loading context and publishes a reduced safe context in `report.json` by default.
 
@@ -234,15 +235,16 @@ Required provider inputs:
 
 - GitHub Actions:
   - `GITHUB_EVENT_PATH`
-  - `CALI_PLATFORM` or `--platform`
+  - `CALI_PLATFORM` or `--platform` when the artifact extension does not identify the platform
   - `CALI_ARTIFACT_PATH` or `--artifact`
   - optional `CALI_APP_ID`
   - optional `CALI_DEVICE_NAME`
   - optional `CALI_OUTPUT_DIR`
+  - optional `CALI_LOGS_URL`
 - EAS:
-  - `QA_PLATFORM` or `--platform`
+  - `QA_PLATFORM` or `--platform` when the artifact extension does not identify the platform
   - `APP_PATH` or `--artifact`
-  - optional `APPLICATION_ID`
+  - optional `APPLICATION_ID` (EAS can often provide this from app config; otherwise Cali tries artifact inference)
   - optional `CALI_DEVICE_NAME`
   - optional `BUILD_ID`
   - optional `WORKFLOW_URL`
@@ -295,6 +297,7 @@ Minimal GitHub Actions example:
 `gh` is preinstalled on GitHub-hosted runners. For self-hosted runners or container jobs, install it explicitly and provide `GH_TOKEN`.
 
 Reference wrapper:
+
 - [`packages/cali/examples/github-actions/run-qa.sh`](./examples/github-actions/run-qa.sh)
 
 ### EAS Workflows
@@ -321,6 +324,7 @@ Minimal EAS example:
 ```
 
 Reference wrapper:
+
 - [`packages/cali/examples/eas-workflows/run-qa.sh`](./examples/eas-workflows/run-qa.sh)
 
 For multi-platform PR comments, export once from both platform reports:

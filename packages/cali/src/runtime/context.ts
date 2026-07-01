@@ -1,6 +1,6 @@
 import path from 'node:path'
 
-import { resolveFromCwd } from '../utils.js'
+import { inferPlatformFromArtifactPath, resolveFromCwd } from '../utils.js'
 import { loadContextFile } from './context-file.js'
 import { detectRepositoryContext } from './context-repo.js'
 import type {
@@ -157,6 +157,7 @@ function applyDefaults(
   cli: CommandCliOptions
 ): CaliContext {
   const output = resolveOutput(commandId, workspaceRoot, cli, context)
+  const inferredPlatform = inferPlatformFromArtifactPath(context.mobile?.artifactPath)
 
   return {
     workspaceRoot,
@@ -165,7 +166,7 @@ function applyDefaults(
     pullRequest: normalizePullRequest(context.pullRequest),
     mobile: isMobileCommand(commandId)
       ? {
-          platform: context.mobile?.platform ?? config.mobileDefaults.platform,
+          platform: context.mobile?.platform ?? inferredPlatform ?? config.mobileDefaults.platform,
           artifactPath: context.mobile?.artifactPath,
           appId: context.mobile?.appId ?? config.mobileDefaults.appId,
           deviceName: context.mobile?.deviceName ?? config.mobileDefaults.deviceName,

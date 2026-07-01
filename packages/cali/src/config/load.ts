@@ -166,7 +166,7 @@ export async function loadCaliConfigFile(cwd: string, explicitPath?: string): Pr
     const configFilePath = resolveFromCwd(cwd, explicitPath)
 
     if (!existsSync(configFilePath)) {
-      return {}
+      throw new Error(`Cali config file does not exist: ${configFilePath}`)
     }
 
     const loaded = await explorer.load(configFilePath)
@@ -197,7 +197,10 @@ export async function loadCommandConfig(
       ? resolveFromCwd(cwd, fileConfig.workspaceRoot)
       : undefined,
     contextPath: merged.contextPath ? resolveFromCwd(cwd, merged.contextPath) : undefined,
-    skillPaths: uniqueStrings([...(fileConfig.skillPaths ?? []), ...getBuiltInSkillPaths(cwd)]),
+    skillPaths: uniqueStrings([
+      ...(fileConfig.skillPaths ?? []).map((skillPath) => resolveFromCwd(cwd, skillPath)),
+      ...getBuiltInSkillPaths(cwd),
+    ]),
     enabledToolPacks: merged.enabledToolPacks ?? [],
     outputPublishers: merged.outputPublishers ?? ['file'],
     extraInstructions: asArray(merged.extraInstructions),

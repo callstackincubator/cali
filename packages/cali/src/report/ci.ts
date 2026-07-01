@@ -102,6 +102,7 @@ function toInlineTableCell(value: string) {
     .split('\n')
     .map((part) => part.trim())
     .filter(Boolean)
+    .map(escapeHtml)
     .join('<br>')
     .replaceAll('|', '\\|')
 }

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 import { DOCS_URLS } from '../docs.js'
+import { inferPlatformFromArtifactPath } from '../utils.js'
 import { detectRepositoryContext, sanitizeUrl } from './context-repo.js'
 import type { CaliContext, CaliPlatform, CommandId } from './types.js'
 
@@ -165,8 +166,11 @@ async function buildGithubActionsContext(
   const outputDir =
     options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? `./artifacts/${commandId}`
   const buildId = options.buildId ?? readOptionalEnv('GITHUB_RUN_ID')
-  const platform = options.platform ?? normalizePlatform(readOptionalEnv('CALI_PLATFORM'))
   const artifactPath = options.artifactPath ?? readOptionalEnv('CALI_ARTIFACT_PATH')
+  const platform =
+    options.platform ??
+    normalizePlatform(readOptionalEnv('CALI_PLATFORM')) ??
+    inferPlatformFromArtifactPath(artifactPath)
   const serverUrl = readOptionalEnv('GITHUB_SERVER_URL')
   const repositoryName = readOptionalEnv('GITHUB_REPOSITORY')
   const workflowUrl =
@@ -202,7 +206,7 @@ async function buildGithubActionsContext(
     outputDir,
     buildId,
     workflowUrl,
-    logsUrl: options.logsUrl,
+    logsUrl: options.logsUrl ?? readOptionalEnv('CALI_LOGS_URL'),
   })
 }
 
@@ -216,7 +220,10 @@ async function buildEasContext(
   const outputDir =
     options.outputDir ?? readOptionalEnv('CALI_OUTPUT_DIR') ?? `./artifacts/${commandId}`
   const artifactPath = options.artifactPath ?? readOptionalEnv('APP_PATH')
-  const platform = options.platform ?? normalizePlatform(readOptionalEnv('QA_PLATFORM'))
+  const platform =
+    options.platform ??
+    normalizePlatform(readOptionalEnv('QA_PLATFORM')) ??
+    inferPlatformFromArtifactPath(artifactPath)
 
   if ((commandId === 'qa' || commandId === 'perf-review') && !artifactPath) {
     throw createCiContextError('EAS CI mode requires APP_PATH or --artifact for mobile commands.')

@@ -180,6 +180,27 @@ export function normalizePlatform(value: string | undefined): CaliPlatform | und
   return undefined
 }
 
+export function inferPlatformFromArtifactPath(artifactPath: string | undefined) {
+  if (!artifactPath) {
+    return undefined
+  }
+
+  const normalized = artifactPath.toLowerCase()
+  if (normalized.endsWith('.apk') || normalized.endsWith('.aab')) {
+    return 'android' satisfies CaliPlatform
+  }
+
+  if (
+    normalized.endsWith('.app') ||
+    normalized.endsWith('.app.tar.gz') ||
+    normalized.endsWith('.ipa')
+  ) {
+    return 'ios' satisfies CaliPlatform
+  }
+
+  return undefined
+}
+
 export function humanizeScreenshotLabel(fileName: string) {
   const stem = fileName.replace(/\.[^.]+$/, '')
   const words = stem

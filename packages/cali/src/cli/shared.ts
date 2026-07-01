@@ -128,7 +128,7 @@ export function registerCommonMobileOptions(command: any, localDescription?: str
   return registerCommonCommandOptions(command)
     .option('--local <platform>', localDescription ?? 'Local mobile mode: android or ios')
     .option('--platform <name>', 'Override platform: android or ios')
-    .option('--artifact <path>', 'App artifact path (.apk, .aab, .app, .ipa)')
+    .option('--artifact <path>', 'App artifact path (.apk, .aab, .app, .app.tar.gz, .ipa)')
     .option('--app-id <id>', 'Optional application identifier / package name override')
     .option('--device <name>', 'Simulator or emulator name to provision')
 }

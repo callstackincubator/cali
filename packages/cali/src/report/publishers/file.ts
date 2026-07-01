@@ -51,6 +51,7 @@ function createPublishedContext(report: CommandReport) {
       ? {
           id: report.context.build.id,
           workflowUrl: sanitizeUrl(report.context.build.workflowUrl, { stripQuery: true }),
+          logsUrl: sanitizeUrl(report.context.build.logsUrl, { stripQuery: true }),
         }
       : undefined,
     output: {},
